@@ -53,9 +53,59 @@ Two of the scripts here deliberately keep their state in `/tmp` and only touch
 `dhd.ko`, Broadcom's **FullMAC** driver. The 802.11 state machine runs on the
 radio firmware, not in Linux. That means:
 
-- no `mac80211`, so no `iw`, no monitor mode, no packet injection
+- no `mac80211`, so no `iw` and none of the standard Linux wireless tooling
 - `wl` is the only interface to the radios
 - `wl` ioctls can block indefinitely during DFS events — always bound them
 
-If you were hoping to use this as a wireless sniffer, that is where the idea
-ends. As an AP, a server, or a wired appliance it is excellent.
+## `wl` documents far less than it implements
+
+    wl -h            usage plus ~180 command descriptions
+    wl cmds          a much longer list, ~650 entries
+    wl -h <cmd>      per-command help, including for undocumented ones
+
+Roughly **470 commands are absent from `wl -h`** but present in `cmds` and
+carrying built-in help. Some are genuinely useful — `bss_peer_info` returns
+per-client RSSI, TX/RX rate, rateset and age in a single call, which is far
+richer than `assoclist`.
+
+**Presence in the list does not mean the driver supports it.** `sar_limit` and
+`rrm_nbr_list` both exist and both return `wl: Unsupported`. The command table
+is generic across Broadcom's product range and this firmware implements a
+subset. Treat the list as candidates to test, not as capabilities.
+
+## Monitor mode: present, and non-functional
+
+Worth stating carefully, because the obvious inference from "FullMAC, no
+mac80211" is that monitor mode does not exist. It does exist. It just does not
+work.
+
+The entire control surface is there:
+
+    wl -i eth6 monitor 1                    # accepted, reads back 1
+    wl -i eth6 monitor_promisc_level 0xf    # promisc + ctrl + fcs
+    ip link show prism0                     # appears, link/ieee802.11/prism
+    tcpdump -i prism0 -L                    # offers PRISM_HEADER
+
+A `prism0` interface is created, comes up, and tcpdump correctly identifies it
+as *802.11 plus Prism header*. Everything looks right.
+
+**No frames are ever delivered to it.** Measured at the driver level:
+
+    prism0 rx_packets after 30s : 0
+    eth6   rx_packets same window: 1612
+
+Tested with every promisc bit set, and with `monitor` set to 1, 2 and 3 — the
+ioctl accepts 2 and 3 although the help documents only 0 and 1, and neither
+even creates the interface. No driver errors are logged. The radio is plainly
+receiving; the frames simply never reach the monitor path.
+
+So the practical answer is unchanged — **this box cannot be used as a wireless
+sniffer** — but the reason is not that the feature is missing. It is another
+instance of the pattern in `99-gotchas.md`: the presentation layer shipped
+without the datapath behind it.
+
+Enabling and disabling it is harmless. The AP kept running throughout and no
+client dropped, which is consistent with "active monitor mode (interface still
+operates)". Revert with `wl -i <if> monitor 0`.
+
+As an AP, a server, or a wired appliance the box is excellent.

@@ -159,3 +159,13 @@ value saves, persists across reboots, and is never read.
 Confirmed inert on this firmware: `script_usbmount`, `/jffs/scripts/`,
 `/etc/init.d/`, and the VLAN `vlan_rulelist`. Verify behaviour before trusting
 a setting, no matter how official it looks.
+
+**The pattern is not limited to the GUI.** Monitor mode is the same thing one
+layer down: `wl monitor 1` is accepted, a `prism0` interface appears with the
+correct `link/ieee802.11/prism` type, and tcpdump offers `PRISM_HEADER` — and
+zero frames are ever delivered to it. Every part of the control surface works
+except the one that carries data. See `00-hardware.md`.
+
+The general lesson: on this firmware, **a setting that accepts a value, persists
+it, and reads it back is not evidence that anything acts on it.** Measure the
+effect, not the acknowledgement.
