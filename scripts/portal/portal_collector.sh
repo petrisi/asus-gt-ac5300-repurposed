@@ -213,10 +213,18 @@ while :; do
         s_rm=$(iptables -t mangle -S 2>/dev/null | grep -c .)
         s_rr=$(iptables -t raw -S 2>/dev/null | grep -c .)
 
-        s_dhn=$(grep -c . "$LEASES" 2>/dev/null); [ -z "$s_dhn" ] && s_dhn=0
-        s_dhl=$(awk '{ gsub(/"/,"",$4)
+        # dnsmasq appends a "duid <server-duid>" line to the lease file when
+        # DHCPv6 is enabled. It is NOT a lease: field 1 is the literal string
+        # "duid", which lands unquoted in the JSON ("exp":duid) and makes the
+        # whole document fail JSON.parse() -- the dashboard then reports
+        # "collector not responding" even though the collector is running fine.
+        # Accept only rows whose first field is a numeric expiry.
+        # The separator must count emitted rows (n++), not NR: NR still counts
+        # the skipped duid row and would emit a spurious leading comma.
+        s_dhn=$(awk '$1 ~ /^[0-9]+$/' "$LEASES" 2>/dev/null | grep -c .); [ -z "$s_dhn" ] && s_dhn=0
+        s_dhl=$(awk '$1 ~ /^[0-9]+$/ { gsub(/"/,"",$4)
             printf "%s{\"exp\":%s,\"mac\":\"%s\",\"ip\":\"%s\",\"host\":\"%s\"}",
-                   (NR>1?",":""), $1, $2, $3, ($4=="*"?"":$4) }' "$LEASES" 2>/dev/null)
+                   (n++?",":""), $1, $2, $3, ($4=="*"?"":$4) }' "$LEASES" 2>/dev/null)
 
         s_radios=""; s_sta=""; sep=""
         for IF in eth6 eth7 eth8; do

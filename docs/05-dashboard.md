@@ -81,13 +81,25 @@ band-steering daemon reads the same ones — polling without it silently corrupt
 steering decisions, because the daemon then sees near-zero airtime for every
 station. The collector does this correctly; if you adapt it, keep the flag.
 
-## Two things learned the hard way
+## Three things learned the hard way
 
 **Judge liveness by data freshness, not process existence.** A hung collector
 stays in the process table indefinitely. The supervisor checks the age of
 `status.json` and restarts on staleness; the UI reports "data stale" rather
 than showing a frozen chart that looks live. An earlier version checked "is the
 process running" and sat happily for over three days with a wedged collector.
+
+**But freshness is not validity.** That same watchdog judges only the *age* of
+`status.json`, so a collector cheerfully emitting malformed output every two
+seconds looks perfectly healthy to it. Exactly that happened: dnsmasq's `duid`
+line was parsed as a DHCP lease and produced `"exp":duid` — an unquoted bare
+word — which made the entire document fail `JSON.parse()`. The page reported
+"collector not responding" while the collector was running fine and the
+watchdog stayed satisfied, because staleness was never the problem.
+
+Freshness detects a *stopped* producer. It says nothing about a *wrong* one. If
+you adapt this, have the supervisor also confirm the payload starts with `{` and
+ends with `}` before trusting its timestamp.
 
 **Bound everything that reads `/proc` or calls `wl`.** Both can block forever on
 this platform, and one of them will eventually. The collector wraps them in a

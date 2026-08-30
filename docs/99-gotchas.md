@@ -169,3 +169,77 @@ except the one that carries data. See `00-hardware.md`.
 The general lesson: on this firmware, **a setting that accepts a value, persists
 it, and reads it back is not evidence that anything acts on it.** Measure the
 effect, not the acknowledgement.
+
+## A bulk `wl` sweep can wedge the radio firmware until reboot
+
+Running every Tier A ("bare call reads") command against one radio segfaulted
+three `wl` processes — unhandled page fault, all at the same address — and left
+the **scan engine** wedged:
+
+    eth6  escanresults -> Scan timeout!
+    all   chanim_acs_record -> empty
+
+`acsd` then pinned a core at 100%, retrying scans with no backoff (73% system
+time — a tight ioctl loop), having silently stopped its channel-selection cycle
+about an hour earlier. Nothing else on the box was affected: all radios kept
+beaconing and every client stayed associated.
+
+The wedge survived `escanabort`, `scanabort`, `restart_acsd`, `service
+restart_wireless`, and `wl down`/`up` on the affected radio. **Only a full
+reboot cleared it**, which places the stuck state in the radio chip's own
+firmware rather than in driver software.
+
+So a read-only sweep is not risk-free. Run one when a reboot is acceptable, not
+against a box that is awkward to reach.
+
+**`Scan Rejected` is not the symptom.** A radio with associated clients on a DFS
+channel refuses manual scans normally, and two of the three radios reported
+exactly that both before and after. Only `Scan timeout!` on the swept radio
+indicated the real fault. Diagnosing this means knowing which refusals are
+routine.
+
+## The GUI's Apply does not commit nvram
+
+Clicking **Apply** in the ASUS GUI sets the value in *running* nvram and updates
+any file derived from it, but does **not** write it to flash. The setting works
+perfectly until the next reboot, then silently reverts to the last committed
+value.
+
+This was confirmed with `sshd_authkeys`: a key added through the GUI worked for
+15.8 days of uptime and vanished on reboot, restoring a key from the original
+rooting. Re-adding it through the GUI and rebooting reproduced the reversion
+exactly. `nvram commit` afterwards made it survive.
+
+    # after any GUI change intended to be permanent
+    nvram commit
+
+It turns every GUI change into a latent time bomb that only detonates on a
+reboot or power cut, potentially months later, with nothing obviously linking
+the failure to the change that caused it. For SSH keys it means losing remote
+access to a box you may not be able to reach physically.
+
+There is no way to read the flash copy without rebooting — `nvram get` only ever
+shows the running value — so **verify persistence with an actual reboot**, and
+keep a second way in (password auth, or a known-good second key) open until that
+reboot has proven the change survived.
+
+## dnsmasq writes a non-lease line into its lease file
+
+With DHCPv6 enabled, dnsmasq appends its own server identifier to
+`dnsmasq.leases`:
+
+    86400 aa:bb:cc:11:22:33 192.168.1.50 laptop 01:aa:bb:cc:11:22:33
+    duid 00:03:00:01:aa:bb:cc:dd:ee:ff
+
+That second line is not a lease. Anything parsing the file field-by-field will
+read the literal string `duid` as the expiry, and a naive JSON emitter produces
+`"exp":duid` — an unquoted bare word that makes the **whole document** fail to
+parse, not merely one bad record.
+
+Filter on a numeric first field:
+
+    awk '$1 ~ /^[0-9]+$/ { ... }' "$LEASES"
+
+Count emitted rows for the separator (`n++`), not `NR` — `NR` still counts the
+skipped line, so a `duid` row in first position yields a leading comma and the
+output is invalid again.

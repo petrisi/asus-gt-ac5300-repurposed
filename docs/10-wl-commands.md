@@ -149,7 +149,16 @@ loses persistence across reboot.
 reboots; `wl` settings do not. But the GUI is blind, and every piece of
 instrumentation on this platform lives behind `wl`.
 
-## Two hazards when sweeping
+## Three hazards when sweeping
+
+**A full sweep can wedge the radio firmware.** Running the complete Tier A set
+against one radio segfaulted three `wl` processes and left the scan engine
+returning `Scan timeout!` indefinitely, with `acsd` pinning a core at 100%. It
+survived every soft remedy — `scanabort`, `restart_acsd`, `restart_wireless`,
+`wl down`/`up` — and cleared only on a reboot. Service was never interrupted:
+all radios kept beaconing and clients stayed associated. Details in
+`99-gotchas.md`.
+
 
 **`wl -h` is not purely textual.** At least one command — observed with
 `roam_channels_in_cache` — blocked in `__skb_recv_datagram` for 540 seconds and
@@ -172,6 +181,10 @@ Sampling 42 Tier A commands on an idle radio:
     empty         :  4
 
     radio state before and after: identical
+
+That "identical" holds for **this 42-command sample**. It does not generalise: a
+later pass over the full Tier A set wedged the radio's scan engine hard enough
+to need a reboot. See `99-gotchas.md` before running a bulk sweep.
 
 The command table is generic across Broadcom's product range; this firmware
 implements a subset. `sar_limit` and `rrm_nbr_list` both exist, carry help, and
@@ -219,5 +232,8 @@ storage, calibration, regulatory limits, or raw hardware.
     ./wl-inventory.sh > wl-commands.tsv          # inventory only, changes nothing
     ./wl-inventory.sh --sweep-a > sweep.txt      # also runs every Tier A command
 
-The sweep is reads only and records radio state either side so you can confirm
-nothing moved. Run it on a radio with no clients.
+The inventory pass changes nothing. **The sweep does not deserve the same
+confidence.** Every command it runs is a bare read, and on one occasion that
+was still enough to segfault three `wl` processes and wedge the radio's scan
+engine until a reboot — see `99-gotchas.md`. Run it on a radio with no clients,
+and only when you can afford to reboot the box.
