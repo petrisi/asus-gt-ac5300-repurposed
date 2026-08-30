@@ -103,7 +103,7 @@ rfi=0; rff=0
 s_nvu=0; s_nvf=0; s_arp=0; s_flow=0; s_ju=0; s_jt=0
 s_rf=0; s_rn=0; s_rm=0; s_rr=0
 s_up=0; s_ut=0; s_uu=0; s_ua=0     # USB absent until proven present
-s_dhn=0; s_dhl=""; s_radios=""
+s_dhn=0; s_dhl=""; s_radios=""; s_sta=""
 
 while :; do
     sleep "$INTERVAL"
@@ -218,7 +218,7 @@ while :; do
             printf "%s{\"exp\":%s,\"mac\":\"%s\",\"ip\":\"%s\",\"host\":\"%s\"}",
                    (NR>1?",":""), $1, $2, $3, ($4=="*"?"":$4) }' "$LEASES" 2>/dev/null)
 
-        s_radios=""; sep=""
+        s_radios=""; s_sta=""; sep=""
         for IF in eth6 eth7 eth8; do
             case "$IF" in
                 eth6) BAND="2.4 GHz" ;;
@@ -235,6 +235,32 @@ while :; do
                 set -- $(wl_to "$IF" chanim_stats | awk 'NR==3{print $2, $4, $11, $14}')
                 rtx=${1:-0}; robss=${2:-0}; rglitch=${3:-0}; ridle=${4:-0}
                 rcl=$(wl_to "$IF" assoclist | grep -c assoclist)
+
+            # Per-station airtime and retry rate.
+            #
+            # *** -noreset IS MANDATORY. ***
+            # A bare `wl bs_data` RESETS the counters after reading, and bsd
+            # reads the same counters to make steering decisions
+            # (bsd_retrieve_bs_data / WLC_GET_VAR: bs_data). Polling without
+            # -noreset would silently corrupt band steering -- the daemon would
+            # see near-zero airtime for every station because we consumed it.
+            #
+            # With -noreset the values accumulate since whoever last reset them,
+            # so the window length is not fixed. The percentages are ratios and
+            # remain meaningful; treat the absolute Mbps figures as indicative.
+            # "Retries" is retries per successful frame and can exceed 100%.
+            if [ "$rcl" -gt 0 ]; then
+                _bs=$(wl_to "$IF" bs_data -noreset | awk -v ifn="$IF" '
+                    NR > 1 && NF >= 6 && $1 ~ /^[0-9A-Fa-f:]{17}$/ {
+                        gsub(/%/, "", $4); gsub(/%/, "", $5); gsub(/%/, "", $6)
+                        printf "%s{\"if\":\"%s\",\"m\":\"%s\",\"phy\":%.1f,\"dm\":%.1f,\"air\":%.1f,\"du\":%.1f,\"rtr\":%.1f}",
+                               (n++ ? "," : ""), ifn, $1, $2+0, $3+0, $4+0, $5+0, $6+0
+                    }')
+                if [ -n "$_bs" ]; then
+                    [ -n "$s_sta" ] && s_sta="${s_sta},"
+                    s_sta="${s_sta}${_bs}"
+                fi
+            fi
                 case "$rnoise"  in ''|*[!0-9-]*) rnoise=0 ;; esac
                 case "$ridle"   in ''|*[!0-9]*)  ridle=0  ;; esac
                 case "$rtx"     in ''|*[!0-9]*)  rtx=0    ;; esac
@@ -266,7 +292,7 @@ while :; do
 '"sys":{"ctxt":%s,"intr":%s,"prun":%s,"ent":%s},'\
 '"fw":{"inp":%s,"inb":%s,"inr":%s,"fwp":%s,"fwb":%s,"fwr":%s},'\
 '"dhcp":{"on":%s,"start":"%s","end":"%s","lease":%s,"n":%s,"leases":[%s]},'\
-'"radios":[%s],'\
+'"radios":[%s],"sta":[%s],'\
 '"slow":{"nvu":%s,"nvf":%s,"arp":%s,"flows":%s,"ju":%s,"jt":%s,'\
 '"rf":%s,"rn":%s,"rm":%s,"rr":%s},'\
 '"usb":{"on":%s,"t":%s,"u":%s,"a":%s}}\n' \
@@ -279,7 +305,7 @@ while :; do
         "$RCTXT" "$RINTR" "$PRUN" "$ent" \
         "$FWIP" "$FWIB" "$rfi" "$FWFP" "$FWFB" "$rff" \
         "$d_on" "$d_st" "$d_en" "$d_ls" "$s_dhn" "$s_dhl" \
-        "$s_radios" \
+        "$s_radios" "$s_sta" \
         "$s_nvu" "$s_nvf" "$s_arp" "$s_flow" "$s_ju" "$s_jt" \
         "$s_rf" "$s_rn" "$s_rm" "$s_rr" \
         "$s_up" "$s_ut" "$s_uu" "$s_ua" > "$TMP" 2>/dev/null

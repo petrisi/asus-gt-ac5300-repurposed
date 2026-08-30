@@ -280,6 +280,22 @@
       </tr></thead>
       <tbody id="radiobody"></tbody>
     </table>
+
+    <h3 style="font-size:13px;font-weight:600;margin:22px 0 2px;color:var(--ink-1)">Per-station airtime</h3>
+    <div class="cardsub">from <code>wl bs_data</code> — the same counters the band-steering daemon reads</div>
+    <table>
+      <thead><tr>
+        <th><span class="hint" title="Client MAC address. Cross-reference with the DHCP leases table below to put a name to it.">Station</span></th>
+        <th><span class="hint" title="Which radio this client is currently associated with.">Radio</span></th>
+        <th><span class="hint" title="Negotiated PHY rate — the theoretical link speed. The gap between this and the actual data rate is where problems hide.">PHY</span></th>
+        <th><span class="hint" title="Actual throughput achieved for this client.">Data</span></th>
+        <th><span class="hint" title="Share of the radio's airtime this one client consumed. A slow client can consume airtime far out of proportion to the data it moves.">Air use</span></th>
+        <th><span class="hint" title="Retransmissions as a share of successful frames — can exceed 100%. Sustained high values mean a marginal link that is stealing airtime from every other client.">Retries</span></th>
+      </tr></thead>
+      <tbody id="stabody"></tbody>
+    </table>
+    <div class="hnote" id="stanote"></div>
+
     <div class="help">
       All of this comes from the closed-source Broadcom <code>wl</code> driver, which exposes a surprising amount read-only. Hover any column heading for a short version.
       <div class="gloss">
@@ -821,6 +837,44 @@ function renderTable() {
   ).join("");
 }
 
+// Per-station airtime, from `wl bs_data`.
+//
+// Two things worth knowing about this data. It is read with -noreset, because a
+// bare bs_data RESETS the counters and the band-steering daemon reads the same
+// ones — polling without it would quietly corrupt steering decisions. And
+// because of that, the values accumulate over a window of unknown length, so the
+// percentages are meaningful while the absolute rates are indicative only.
+const BAND_OF = { eth6: "2.4 GHz", eth7: "5 GHz-1", eth8: "5 GHz-2" };
+
+function renderStations(sta) {
+  const body = el("stabody"), note = el("stanote");
+  if (!sta || !sta.length) {
+    body.innerHTML = '<tr><td colspan="6" style="color:var(--ink-muted)">no associated stations</td></tr>';
+    note.textContent = "";
+    return;
+  }
+  // Busiest first: airtime is the scarce resource, so that is the useful ordering.
+  const rows = sta.slice().sort((a, b) => b.air - a.air);
+  body.innerHTML = rows.map(s => {
+    // A marginal link retransmitting heavily costs everyone airtime, so flag it.
+    const hot = s.rtr >= 30;
+    const warm = s.rtr >= 10 && !hot;
+    const col = hot ? "var(--crit, #d9534f)" : warm ? "var(--warn, #d0a215)" : "";
+    return `<tr><td style="font-variant-numeric:tabular-nums">${s.m}</td>` +
+           `<td>${BAND_OF[s.if] || s.if}</td>` +
+           `<td>${s.phy ? s.phy.toFixed(0) + " Mbps" : "–"}</td>` +
+           `<td>${s.dm ? s.dm.toFixed(1) + " Mbps" : "–"}</td>` +
+           `<td>${s.air.toFixed(1)} %</td>` +
+           `<td${col ? ` style="color:${col}"` : ""}>${s.rtr.toFixed(1)} %</td></tr>`;
+  }).join("");
+
+  const worst = rows.reduce((a, b) => (b.rtr > a.rtr ? b : a), rows[0]);
+  const air = rows.reduce((t, s) => t + s.air, 0);
+  note.textContent = worst.rtr >= 30
+    ? `${worst.m} is retransmitting ${worst.rtr.toFixed(0)}% of its frames — a marginal link consuming airtime that other clients could use.`
+    : `Stations account for ${air.toFixed(1)}% of airtime between them. Retries are within normal range.`;
+}
+
 function renderRadios(radios) {
   el("radiobody").innerHTML = radios.map(r => {
     if (!r.on) {
@@ -871,6 +925,7 @@ function paint(d) {
   el("k-lan").textContent = d.host.lan;
   el("clock").textContent = d.clock + " " + d.tz;
   renderRadios(d.radios);
+  renderStations(d.sta);
   renderLeases(d.dhcp);
   el("cpu").textContent = d.cpu;
   el("load").textContent = "load " + d.load;

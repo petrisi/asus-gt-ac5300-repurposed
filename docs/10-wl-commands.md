@@ -85,6 +85,70 @@ A name-only pass put these in the "safe" bucket:
 Nothing in those names suggests danger. `scripts/wl-inventory.sh` matches
 against the help text as well, which is why it catches them.
 
+## What `wl` gives you that the GUI does not
+
+The wireless GUI pages expose **180 `wl_*` nvram variables** — SSID, security,
+channel, bandwidth, DTIM, beacon interval, frameburst, AMPDU, WMM, beamforming,
+MU-MIMO, MAC filtering, WDS, RADIUS, transmit power, the roaming RSSI threshold.
+
+Every one of them is a **setting**. Not one **reads** anything.
+
+There is no per-client rate, no airtime figure, no noise floor, no retry count,
+no driver counter anywhere in the GUI. That entire dimension is `wl`-only, and
+it is the more useful half when something is actually wrong.
+
+### The instrumentation gap
+
+| command | what it gives you |
+|---|---|
+| `bs_data` | per-station airtime, retry rate, and PHY-rate versus actual throughput |
+| `chanim_stats` | per-channel noise floor, glitch count, airtime busy/idle |
+| `sta_info <mac>` | **per-antenna** RSSI (four values), cumulative packet and byte counters |
+| `bss_peer_info` | RSSI, TX/RX rate, rateset and idle time for every peer, in one call |
+| `counters` | the complete driver statistics block |
+| `nrate` | current MCS, spatial streams and bandwidth; can force a fixed rate |
+| `txbf_rateset` | beamforming enablement **per MCS** — the GUI offers only on/off |
+| `scb_timeout` | station inactivity timeout (60 s by default) |
+| `chanim_mode` | interference detect/avoid mode |
+| `list_ie` / `add_ie` | inspect and inject vendor IEs in your own beacons |
+
+`bs_data` is the standout. It reports what share of the radio's airtime each
+client consumed and what fraction of its frames needed retransmitting — the
+single most diagnostic view of a wireless problem, and completely absent from
+every ASUS screen. A slow client at the edge of range can consume airtime out of
+all proportion to the data it moves, and nothing in the GUI would ever show you.
+
+**`bs_data` resets its counters when read.** Use `-noreset`. The band-steering
+daemon reads the same counters (`bsd_retrieve_bs_data` appears in its symbols),
+so polling without it silently corrupts steering decisions — the daemon sees
+near-zero airtime for every station because you consumed the reading. With
+`-noreset` the values accumulate over a window of unknown length: the
+percentages stay meaningful, the absolute rates are indicative.
+
+### More SSIDs than the GUI allows
+
+    bssmax              8      BSSes the radio actually supports
+    GUI guest networks  3
+
+So four more SSIDs per radio than the interface will create, via
+`interface_create`. Real, but you own the consequences: ASUS's configuration
+layer knows nothing about them, so there is no nvram persistence, no GUI
+representation, and you must recreate them at every boot from your own script.
+
+### What is *not* a gap
+
+The Professional page is richer than it is given credit for. `frameburst`,
+`ampdu_mpdu`, `amsdu`, `wme`, `txbf`, `mumimo`, `dtim`, beacon interval,
+`rts`/`frag`, `macmode`, WDS, transmit power, country code, 802.11h, DFS and
+airtime fairness are all there. Setting those through `wl` gains nothing and
+loses persistence across reboot.
+
+### The pattern worth adopting
+
+**Configure in the GUI, observe with `wl`.** GUI settings persist and survive
+reboots; `wl` settings do not. But the GUI is blind, and every piece of
+instrumentation on this platform lives behind `wl`.
+
 ## Two hazards when sweeping
 
 **`wl -h` is not purely textual.** At least one command — observed with

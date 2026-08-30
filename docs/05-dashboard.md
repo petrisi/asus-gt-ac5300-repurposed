@@ -68,6 +68,19 @@ DNS AAAA record has gone stale.
 And remember `ip6tables` is a separate table. Opening the port in `iptables`
 does nothing for IPv6.
 
+## Per-station airtime
+
+The wireless card includes a per-station table from `wl bs_data` — airtime
+consumed, retry rate, and negotiated PHY rate against actual throughput. None of
+that exists anywhere in the ASUS GUI, and it is the fastest way to spot a
+marginal client that is consuming airtime out of proportion to the data it
+moves.
+
+**Read it with `-noreset`.** A bare `bs_data` resets the counters, and the
+band-steering daemon reads the same ones — polling without it silently corrupts
+steering decisions, because the daemon then sees near-zero airtime for every
+station. The collector does this correctly; if you adapt it, keep the flag.
+
 ## Two things learned the hard way
 
 **Judge liveness by data freshness, not process existence.** A hung collector
