@@ -38,6 +38,7 @@ support this model, so all of this runs on what ASUS shipped.
 | [07-rrd-history.md](docs/07-rrd-history.md) | long-term history |
 | [08-exposure.md](docs/08-exposure.md) | if it faces the internet |
 | [10-wl-commands.md](docs/10-wl-commands.md) | the radio control surface: 638 commands, tiered by what is safe to call |
+| [11-acsd-channel-selection.md](docs/11-acsd-channel-selection.md) | why one radio changes channel every 15 minutes, and how to audit its choices |
 | [wl-tier-a-catalog.md](reference/wl-tier-a-catalog.md) | catalogue of all 476 safely-readable wl commands, by function |
 | [wl-tier-bcd-catalog.md](reference/wl-tier-bcd-catalog.md) | the 160 wl commands that act, transmit or persist — and what each one costs |
 | [99-gotchas.md](docs/99-gotchas.md) | **the platform traps — read this before debugging anything** |
