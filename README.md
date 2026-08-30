@@ -29,7 +29,7 @@ support this model, so all of this runs on what ASUS shipped.
 | | |
 |---|---|
 | [00-hardware.md](docs/00-hardware.md) | what the box is, and the one architectural quirk that will bite you |
-| [01-getting-shell.md](docs/01-getting-shell.md) | SSH, keys, and dropbear's limitations |
+| [01-getting-shell.md](docs/01-getting-shell.md) | SSH, key types, and making the key survive a reboot |
 | [02-persistence.md](docs/02-persistence.md) | **making anything survive a reboot — the hard part** |
 | [03-disable-telemetry.md](docs/03-disable-telemetry.md) | **stopping the call-home services for good** |
 | [04-usb-and-entware.md](docs/04-usb-and-entware.md) | storage and a package manager |

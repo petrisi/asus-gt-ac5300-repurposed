@@ -17,11 +17,10 @@ but does not write to flash:
 
     nvram commit
 
-This is not belt-and-braces. A key added through the GUI here worked for 15.8
-days of uptime and vanished on the first reboot, restoring a key from the
-original rooting months earlier — locking out the only remote access. `nvram
-get` only ever shows the *running* value, so the sole way to verify persistence
-is to actually reboot. See `99-gotchas.md`.
+This is not belt-and-braces: a key set this way survives indefinitely while the
+box stays up, then disappears on the first reboot. `nvram get` only ever shows
+the *running* value, so the sole way to verify persistence is to actually
+reboot. See `99-gotchas.md`.
 
 Once you are in with the key **and a reboot has proven it survives**:
 
@@ -31,7 +30,7 @@ Once you are in with the key **and a reboot has proven it survives**:
 Keep password auth enabled until that reboot. It is the fallback that makes a
 failed test cost nothing.
 
-## dropbear is newer than it is usually given credit for
+## Key types and client configuration
 
 The shipped dropbear is **v2020.81** on firmware `3.0.0.4.386_51582`, and
 `ssh-ed25519` and `curve25519-sha256` are both compiled in. So prefer:

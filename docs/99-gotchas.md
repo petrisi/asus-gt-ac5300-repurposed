@@ -205,10 +205,9 @@ any file derived from it, but does **not** write it to flash. The setting works
 perfectly until the next reboot, then silently reverts to the last committed
 value.
 
-This was confirmed with `sshd_authkeys`: a key added through the GUI worked for
-15.8 days of uptime and vanished on reboot, restoring a key from the original
-rooting. Re-adding it through the GUI and rebooting reproduced the reversion
-exactly. `nvram commit` afterwards made it survive.
+A key set through the GUI persists only until the next reboot, which then
+restores whatever was last committed. `nvram commit` afterwards makes it
+survive.
 
     # after any GUI change intended to be permanent
     nvram commit
