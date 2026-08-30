@@ -159,9 +159,26 @@ No host-side knob overrides this. `monitor_type`, `monitor_format` and a
   unrelated to packet monitoring) responds by restarting wireless — so a bad
   blob gives you a reboot loop, not a diagnostic
 
-**What the firmware does offer** is `stamon`, exposed as `wl sta_monitor` — it
-tracks counters for specific stations by MAC. It is per-station statistics, not
-frame capture, so it is not a sniffing substitute.
+**What the firmware does offer** is `stamon`, exposed as `wl sta_monitor`. It is
+per-station statistics rather than frame capture, so it is not a sniffing
+substitute — and in testing it produced no usable data either.
+
+Registration is genuinely implemented: `add` with a malformed address returns
+`Bad Argument`, and `del` of an address that was never added returns
+`Not Found`, so the driver validates input and tracks list membership.
+
+But `sta_monitor counters` only ever reports a single figure, `stamon cnt=N`,
+and it stayed at `0` for a registered, associated, actively transmitting station
+across 60 seconds — during which that station's `sta_info` packet count rose by
+several hundred. A stale value of 23 was observed once, left over from earlier
+monitor-mode experiments; it was static, `reset_cnts` cleared it, and it did not
+resume counting when monitor mode was re-enabled.
+
+One case could not be tested: a station transmitting on the monitored channel
+that is *not* associated to this radio, which is what STA monitor is arguably
+designed for. Scanning is rejected while the interface is an AP, and there were
+no cached results to supply a neighbouring address. So it is not established
+whether the counter is unfed, or simply had nothing in scope to count.
 
 If you need frames off the air, use a USB adapter with a `mac80211` driver.
 That is its own project on this platform, and worth checking module
