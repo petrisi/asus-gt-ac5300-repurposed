@@ -111,6 +111,62 @@ sniffer** — but the reason is not that the feature is missing. It is another
 instance of the pattern in `99-gotchas.md`: the presentation layer shipped
 without the datapath behind it.
 
+### Where exactly the path breaks, and whether it can be fixed
+
+Short answer: **the dongle firmware is built without monitor support, and there
+is no host-side setting that changes that.**
+
+The host driver is not the problem. `dhd.ko` contains the entire receive path —
+`dhd_add_monitor_if`, `dhd_del_monitor_if`, `dhd_rx_mon_pkt`,
+`netdev_monitor_ops`, and strings for both `prism` and `radiotap`. It creates
+the interface correctly, one per radio.
+
+The firmware is the problem, and it says so twice.
+
+**The capability string omits it.** `wl -i <if> cap` lists what the firmware
+advertises, and there is no `monitor` entry:
+
+    160 802.11d 802.11h ampdu ampdu_rx ampdu_tx amsdurx amsdutx anqpo ap
+    bcm_dcs bgdfs bsstrans cac ccx cptlv-4 cqa dfrts dwds dyn160 led mbss8 mfp
+    multi-user-beamformee multi-user-beamformer p2po probresp_mac_filter
+    proptxstatus pspretend psr psta radio_pwrsave rm rxchain_pwrsave
+    single-user-beamformee single-user-beamformer sta stbc-rx-1ss stbc-tx toe
+    traffic-mgmt traffic-mgmt-dwm txpwrcache vht-prop-rates wds wet wme wnm
+
+**The firmware build name omits it too.** Broadcom names these images after
+their compiled-in feature set, and the string is embedded in `dhd.ko`:
+
+    4366c0-roml/pcie-ag-splitrx-fdap-mbss-mfp-wnm-osen-wl11k-wl11u-txbf-pktctx-
+    amsdutx-ampduretry-chkd2hdma-proptxstatus-11nprop-obss-dbwsw-ringer-
+    dmaindex16-bgdfs-stamon-hostpmac-murx-splitassoc-hostmemucode-dyn160-dhdhdr
+
+No `monitor`, and no `wltest`/`mfgtest` either. So the dongle never emits
+monitor packets, `dhd_rx_mon_pkt` is never called, and `prism0` stays empty.
+
+No host-side knob overrides this. `monitor_type`, `monitor_format` and a
+`dhd`-level `monitor` iovar are all absent or `Unsupported`; `promisc` and
+`allmulti` are already 1 and make no difference.
+
+**Could you replace the firmware?** In principle. In practice, no:
+
+- the image is embedded in `dhd.ko` (1.75 MB); the `firmware_path` module
+  parameter exists but is empty
+- Broadcom does not publish alternative 4366c0 builds, and a monitor-enabled
+  one is not available anywhere public
+- driver and firmware are version-locked — this pairs dhd `1.363.45.84015` with
+  firmware `10.10.122.20`
+- a mismatch traps the dongle, and `/usr/sbin/dhd_monitor` (a crash watchdog,
+  unrelated to packet monitoring) responds by restarting wireless — so a bad
+  blob gives you a reboot loop, not a diagnostic
+
+**What the firmware does offer** is `stamon`, exposed as `wl sta_monitor` — it
+tracks counters for specific stations by MAC. It is per-station statistics, not
+frame capture, so it is not a sniffing substitute.
+
+If you need frames off the air, use a USB adapter with a `mac80211` driver.
+That is its own project on this platform, and worth checking module
+availability before committing to it.
+
 Enabling and disabling it is harmless. Testing included radios carrying live
 clients, and not one dropped — the "active monitor mode (interface still
 operates)" claim holds. Revert with `wl -i <if> monitor 0`; the prism device
