@@ -126,6 +126,18 @@ which is the same lesson as `99-gotchas.md` in a different costume.
 | `wnm_bsstrans_req` | send an 802.11v transition request by hand (Tier C — it transmits) |
 | `rrm_bcn_req` | ask a client to perform an 802.11k beacon measurement (Tier C) |
 
+## The Tier A catalogue
+
+`reference/wl-tier-a-catalog.md` documents all 476 Tier A commands, grouped into
+23 functional families — identity and capability, associated stations, channel and
+DFS, transmit power, rates and aggregation, roaming and 802.11k/v, offload, PHY
+internals and the rest.
+
+Each entry carries the command's own help text, its usage form, and what it
+actually returned on this hardware, so you can see at a glance which commands are
+live and which report `Unsupported`. Every family opens with a note on what it is
+for and which members are worth knowing.
+
 ## Regenerating
 
     ./wl-inventory.sh > wl-commands.tsv          # inventory only, changes nothing
