@@ -1,0 +1,645 @@
+# wl command inventory — ASUS GT-AC5300, firmware 3.0.0.4.386_51582
+# Regenerate with scripts/wl-inventory.sh. See docs/10-wl-commands.md for the tier model.
+#
+# A = bare call reads, safe to sweep      B = bare call acts, exclude from sweeps
+# C = transmits or needs arguments        D = persistent/regulatory/calibration, do not touch
+#
+command	tier	help
+a_mrate	A	valid values for 802.11a are (6, 9, 12, 18, 24, 36, 48, 54)
+a_rate	A	valid values for 802.11a are (6, 9, 12, 18, 24, 36, 48, 54)
+actframe	C	Send a Vendor specific Action frame to a channel
+add_ie	A	Usage: wl add_ie <pktflag> length OUI hexdata
+addwep	A	10, 26, 32, or 64 hex digits long. The encryption algorithm is
+aibss_bcn_force_config	A	Get/Set AIBSS beacon force configuration
+aibss_txfail_config	A	Set/Get txfail configuration for bcn_timeout, max tx retries and max atim failures
+ampdu_activate_test	A	actiate
+ampdu_clear_dump	B	clear ampdu counters
+ampdu_retry_limit_tid	A	Set per-tid ampdu retry limit; usage: wl ampdu_retry_limit_tid <tid> [0~31]
+ampdu_rr_retry_limit_tid	A	Set per-tid ampdu regular rate retry limit; usage: wl ampdu_rr_retry_limit_tid <tid> [0~31]
+ampdu_rxaggr	A	enable/disable rx aggregation per tid or all tid for specific interface;
+ampdu_send_addba	C	send addba to specified ea-tid; usage: wl ampdu_send_addba <tid> <ea>
+ampdu_send_delba	C	send delba to specified ea-tid; usage: wl ampdu_send_delba <tid> <ea> [initiator]
+ampdu_tid	A	enable/disable per-tid ampdu; usage: wl ampdu_tid <tid> [0/1]
+ampdu_txaggr	A	enable/disable tx aggregation per tid or all tid for specific interface;
+ampdu_txq_prof_dump	A	show txq histogram
+ampdu_txq_prof_start	A	start sample txq profiling data
+ampdu_txq_ss	A	take txq snapshot
+anqpo_auto_hotspot	A	automatic ANQP query to maximum number of hotspot APs, default 0 (disabled)
+anqpo_ignore_bssid_list	A	get, clear, set, or append to ANQP offload ignore BSSID list
+anqpo_ignore_mode	A	ignore duplicate SSIDs or BSSIDs, default 0 (SSID)
+anqpo_ignore_ssid_list	A	get, clear, set, or append to ANQP offload ignore SSID list
+anqpo_results	A	Listens and displays ANQP results.
+anqpo_set	A	set ANQP offload parameters
+anqpo_start_query	B	start ANQP query to peer(s)
+anqpo_stop_query	B	stop ANQP query
+antdiv	A	0 - force use of antenna 0
+antdiv_bcnloss	A	0- Disable Rx antenna flip feature based on consecutive beacon loss
+antgain	A	usage: wl antgain ag0=0x1 ag1=0x2
+ap	A	
+ap_isolate	A	set/get AP isolation
+apname	A	
+arp_hostip	A	Add a host-ip address or display them
+arp_hostip_clear	B	Clear all host-ip addresses
+arp_ol	A	
+arp_peerage	A	Get/Set age of the arp entry in minutes
+arp_stats	A	Display ARP offload statistics
+arp_stats_clear	B	Clear ARP offload statistics
+arp_table_clear	B	Clear arp cache
+arpoe	A	
+assert_type	A	set/get the asset_bypass flag; usage: wl assert_type <1/0> (On/Off)
+assertlog	A	get external assert logs
+assoc	A	(also known as "status")
+assoc_info	A	Returns the assoc req and resp information [STA only]
+assoc_pref	A	Set/Get association preference.
+assoclist	A	AP only: Get the list of associated MAC addresses.
+atim	A	
+atten	A	auto to revert to automatic control
+auth	A	
+authe_sta_list	A	Get authenticated sta mac address list
+autho_sta_list	A	Get authorized sta mac address list
+authorize	B	restrict traffic to 802.1X packets until 802.1X authorization succeeds
+autochannel	A	auto channel selection:
+autocountry_default	D	Select Country Code for use with Auto Contry Discovery
+band	A	auto - auto switch between available bands (default)
+bands	A	
+bcmerrorstr	A	errorstring
+bcnlenhist	A	Usage: wl bcnlenhist [0]
+bcntrim_stats	A	Get Beacon Trim Statistics
+beacon_info	A	Returns the 802.11 management frame beacon information
+bg_mrate	A	force a fixed multicast rate for the B/G PHY:
+bg_rate	A	valid values for 802.11b are (1, 2, 5.5, 11)
+bi	A	
+bmac_reboot	D	Reboot BMAC
+bmon_bssid	A	Set monitored BSSID
+bs_data	A	usage: bs_data [options]
+bss	A	
+bss_peer_info	A	Get BSS peer info of all the peer's in the indivudual interface
+bssid	A	
+bssload_event_check	A	Listens forever for BSS Load events and prints them.
+bssload_report	A	Get the latest BSS Load IE data from the associated AP's beacon
+bssload_report_event	A	Get/Set BSS load threshold for sending WLC_E_BSS_LOAD event
+bssload_static	A	get or set static BSS load
+bssmax	A	
+btc_dynctl	A	Usage:
+btc_dynctl_sim	A	Usage: wl btc_dynctl_sim [1|0] [-b bt_sim_pwr] [-r bt_sim_rssi] [-w wl_sim_rssi]
+btc_dynctl_status	A	Usage: command doeesn't take any arguments]
+btc_flags	A	g/set BT Coex flags
+btc_params	A	g/set BT Coex parameters
+bw_cap	A	Usage: wl bw_cap <2g|5g> [<cap>]
+cac_addts	A	add TSPEC, error if STA is not associated or WME is not enabled
+cac_delts	A	delete TSPEC, error if STA is not associated or WME is not enabled
+cac_delts_ea	A	delete TSPEC, error if STA is not associated or WME is not enabled
+cac_tslist	A	Get the list of TSINFO in driver
+cac_tslist_ea	A	Get the list of TSINFO for given STA in driver
+cac_tspec	A	Get specific TSPEC with matching TSINFO
+cac_tspec_ea	A	Get specific TSPEC for given STA with matching TSINFO
+caldump	A	Usage: wl caldump <cal file name> to dump current calibration info to file
+calload	D	Usage: wl calload <cal file name> to download existing calibration data file
+cap	A	
+cca_get_stats	A	Usage: wl cca_stats [-c channel] [-s num seconds][-n]
+cck_txbw	A	get/set cck txbw (2=20Mhz(lower), 3=20Mhz upper)
+chan_info	A	channel info
+chanim_acs_record	A	get the auto channel scan record.
+chanim_mode	A	get/set channel interference measure (chanim) mode
+chanim_state	A	get channel interference state
+chanim_stats	A	get chanim stats
+channel	A	valid channels for 802.11b/g (2.4GHz band) are 1 through 14
+channel_qa	A	Get last channel quality measurment
+channel_qa_start	A	Start a channel quality measurment
+chq_event	A	Set parameters associated with channel quality event notification
+cis_source	D	Display which source is used for the SDIO CIS
+cisconvert	D	Print CIS tuple for given name=value pair
+cisdump	D	-b <file> -- also write raw bytes to <file>
+cisupdate	D	Write a hex byte stream to specified byte offset to the CIS source (either SROM or OTP)
+ciswrite	D	Write specified <file> to the SDIO/PCIe CIS source (either SROM or OTP)Usage: ciswrite [-p|--pc
+clear_radar_status	A	Clear radar detection status
+clk	A	0: clock off
+clm_data_ver	D	get CLM data version information
+clmload	D	Usage: wl clmload <clm blob file name>
+clmver	A	
+closed	A	0 is open, 1 is hide
+closednet	A	set/get BSS closed network attribute
+cmds	A	
+constraint	C	Send an 802.11h Power Constraint IE
+counters	A	Return driver counter values
+country	D	For simple country setting: wl country <country>
+country_ie_override	D	To set/get country ie
+crsuprs	A	carriersuprs syntax is: crsuprs <channel>
+csa	A	<mode> <count> <channel>[a,b][n][u,l][frame type]
+csscantimer	A	auto channel scan timer in minutes (0 to disable)
+cur_etheraddr	A	Get/set the current hw address
+cur_mcsset	A	Get the current mcs set
+curppr	A	
+customvar1	A	print the value of customvar1 in hex format
+cwmax	A	
+cwmin	A	
+deauthenticate	B	deauthenticate a STA from the AP with optional reason code (AP ONLY)
+deauthorize	B	do not restrict traffic to 802.1X packets until 802.1X authorization succeeds
+default_rateset	A	Returns supported rateset of given phy.
+del_ie	A	Usage: wl del_ie <pktflag> length OUI hexdata
+delta_stats	A	get the delta statistics for the last interval
+delta_stats_interval	A	set/get the delta statistics interval in seconds (0 to disable)
+desired_bssid	A	Set or get the desired BSS ID value
+devpath	A	
+dfs_ap_move	B	Move the AP interface to dfs channel specified:
+dfs_channel_forced	A	Set <channel>[a,b][n][u,l]
+dfs_status	A	Get dfs status
+diag	D	
+disassoc	B	Disassociate from the current BSS/IBSS.
+dngl_wd	A	Usage: wl dngl_wd 0\1 (to turn off\on)
+dongleset	D	Enable uart driver
+down	B	
+drift_stats_reset	B	Reset drift statistics
+dtim	A	
+dump	A	
+dyn_bwsw_params	A	Configure the params for dynamic bandswitch
+eap	A	0 - disable
+eap_restrict	A	set/get EAP restriction
+escan	B	Default to an active scan across all channels for any SSID.
+escan_event_check	B	Listen and prints the escan events from the dongle
+escanabort	B	Abort an escan.
+escanresults	B	Start escan and display results.
+event_filter	A	Set/get event filter
+event_log_set_expand	A	Increase the size of an event log set
+event_log_set_init	A	Initialize an event log set
+event_log_set_shrink	A	Decrease the size of an event log set
+event_log_tag_control	A	Modify the state of an event log tag
+event_msgs	A	set/get hex filter bitmask for MAC event reporting via packet indications
+event_msgs_ext	A	set/get bit arbitrary size hex filter bitmask for MAC
+eventing	A	set/get hex filter bitmask for MAC event reporting up to application layer
+evm	A	Arg 1 is channel number 1-14, or "off" or 0 to stop the test.
+extlog	A	Usage: wl extlog <from_last> <number>
+extlog_cfg	A	get/set external log configuration
+extlog_clr	A	clear external log records
+fasttimer	A	Deprecated. Use fast_timer.
+fbt_auth_resp	A	Get/Set fbt auth response for an interface
+fbt_r0kh_id	A	Get/Set R0 Key Holder Idenitifer for an interface
+fbt_r1kh_id	A	Get/Set 802.11r R1 Key Holder Idenitifer for an interface
+fem	A	usage: wl fem (tssipos2g=0x1 extpagain2g=0x2 pdetrange2g=0x1 triso2g=0x1 antswctl2g=0)
+findserver	A	Used to find the remote server with proper mac address given by the user,this cmd is specific t
+force_vsdb_chans	A	Set/get channels for forced vsdb mode
+fqacurcy	A	Manufacturing test: set frequency accuracy mode.
+frag	A	
+frameburst	A	Disable/Enable frameburst mode
+freqtrack	A	Set Frequency Tracking Mode (0=Auto, 1=On, 2=OFF)
+glacialtimer	A	Deprecated. Use glacial_timer.
+gmode	A	
+gmode_protection	A	Get G protection mode. (0=disabled, 1=enabled)
+gmode_protection_control	A	Get/Set 11g protection mode control alg.(0=always off, 1=monitor local association, 2=monitor o
+gmode_protection_override	A	Get/Set 11g protection mode override. (-1=auto, 0=disable, 1=enable)
+gpioout	A	Usage: gpiomask gpioval
+hs20_ie	A	usage: wl hs20_ie <length> <hexdata>
+ht_features	A	disable/enable/force proprietary 11n rates support. Interface must be down.
+ibss_route_tbl	A	Get/Set ibss route table
+ie	A	Usage: For set: wl ie type length hexdata
+ignore_bcns	A	AP only (G mode): Check for beacons without NONERP element(0=Examine beacons, 1=Ignore beacons)
+infra	A	
+interface_create	B	create an AP/STA interface on a WLC instance that receives the IOVAR
+interface_remove	B	Deletes the interface on which this command is received
+interference	A	NON-ACPHY. Get/Set interference mitigation mode. Choices are:
+interference_override	A	NON-ACPHY. Get/Set interference mitigation override. Choices are:
+intfer_params	A	set/get intfer params
+ip_route_table	A	Get/Set ip route table
+iscan_c	B	Default to an active scan across all channels for any SSID.
+iscan_s	B	Default to an active scan across all channels for any SSID.
+iscanresults	B	Return results from last iscan. Specify a buflen (max 8188)
+isup	A	
+itfr_detect	A	issue an interference detection request
+itfr_enab	A	get/set STA interference detection mode(STA only)
+itfr_get_stats	A	get interference source information
+join	B	Usage: join <ssid> [key <0-3>:xxxxx] [imode bss|ibss] [amode open|shared|openshared|wpa|wpapsk|
+join_pref	B	Set/Get join target preferences.
+keep_alive	C	Send specified "keep-alive" packet periodically.
+keys	A	
+lazywds	A	
+lcnphy_papdepstbl	A	print papd eps table; Usage: wl lcnphy_papdepstbl
+led_blink_sync	A	set/get led_blink_sync
+ledbh	A	Usage: wl ledbh [0-3] [0-15]
+legacy_erp	A	Get/Set 11g legacy ERP inclusion (0=disable, 1=enable)
+lifetime	A	Set Lifetime parameter (milliseconds) for each ac.
+list_ie	A	
+longtrain	A	Manufacturing test: set longtraining mode.
+lpc_params	A	Set/Get Link Power Control params
+lrl	A	
+mac	A	wl mac xx:xx:xx:xx:xx:xx [xx:xx:xx:xx:xx:xx ...]
+mac_rate_histo	A	Usage: wl mac_rate_histo <mac address> <access category> <num_pkts>
+macmode	A	0 - Disable MAC address matching.
+macreg	A	macreg offset size[2,4] [ value ] [ band ]
+macregx	A	macreg offset size[2,4] [ value ] [ band ]
+malloc_dump	A	Deprecated. Folded under 'wl dump malloc
+manfinfo	D	show chip package info in OTP
+maxpower	A	Set temp maxp2g(5g)a0(a1) value
+measure_req	C	Send an 802.11h measurement request.
+mempool	A	
+memuse	A	Usage: wl memuse
+mfp_assoc	C	send assoc
+mfp_auth	C	send auth
+mfp_config	A	Config PMF capability
+mfp_deauth	C	send bogus deauth
+mfp_disassoc	C	send bogus disassoc
+mfp_reassoc	C	send reassoc
+mfp_sa_query	C	Send a sa query req/resp to a peer
+mfp_sha256	A	Config SHA256 capability
+mimo_ps	A	
+mimo_ss_stf	A	get/set SS STF mode.
+mimo_txbw	A	get/set mimo txbw (2=20Mhz(lower), 3=20Mhz upper, 4=40Mhz, 4=40Mhz(DUP)
+mkeep_alive	C	Send specified "mkeep-alive" packet periodically.
+mode_reqd	A	Set/Get operational capabilities required for STA to associate to the BSS supported by the inte
+modesw_timecal	A	Usage:
+monitor	A	0 - disable
+monitor_lq	A	Start/Stop monitoring link quality metrics - RSSI and SNR
+monitor_lq_status	A	Returns averaged link quality metrics - RSSI and SNR values
+monitor_promisc_level	A	Set a bitmap of different MAC promiscuous level of monitor mode.
+mpc_dur	A	Usage: wl mpc_dur <any-number-to-clear>
+mrate	A	valid values for 802.11a are (6, 9, 12, 18, 24, 36, 48, 54)
+msglevel	A	set driver console debugging message bitvector
+mu_group	A	Force the group recommendation result or set parameters for VASIP group recomendation
+mu_policy	A	Configure the MU admission control policies
+mu_rate	A	Usage: wl mu_rate { [auto | -1] | [[rate0] [rate1] [rate2] [rate3]]
+mws_debug_msg	A	Get/Set LTE coex BT-SIG message
+nar_clear_dump	B	Clear non-aggregated regulation counters
+nd_hostip	A	Add a local host-ipv6 address or display them
+nd_hostip_clear	B	Clear all host-ip addresses
+nd_macaddr	A	Get/set the MAC address for offload
+nd_remoteip	A	Add a local remote ipv6 address or display them
+nd_solicitip	A	Add a local host solicit ipv6 address or display them
+nd_status	A	Displays Neighbor Discovery Status
+nd_status_clear	B	Clear neighbor discovery status
+noise	A	
+nrate	A	-r legacy rate (CCK, OFDM)
+ns_hostip	A	Add a ns-ip address or display then
+ns_hostip_clear	B	Clear all ns-ip addresses
+nvget	A	
+nvotpw	A	Usage: wl nvotpw file
+nvram_get	D	get the value of an nvram variable
+nvram_source	D	Display which source is used for nvram
+nvset	A	name=value (no spaces around '=')
+obss_coex_action	C	send OBSS 20/40 Coexistence Mangement Action Frame
+obss_prot	A	Get/set OBSS protection (-1=auto, 0=disable, 1=enable)
+obss_scan_params	A	set/get Overlapping BSS scan parameters
+ofdm_txbw	A	get/set ofdm txbw (2=20Mhz(lower), 3=20Mhz upper, 4(not allowed), 5=40Mhz dup)
+ol_arp_hostip	A	Add a host-ip address or display them
+ol_clr	A	
+ol_cons	A	Usage: ol_cons [<cmd>]
+ol_eventlog	A	Give suboption "list" to list various suboptions
+ol_nd_hostip	A	Add a local host-ipv6 address or display them
+ol_notify_bcn_ie	A	Enable/Disable IE ID notification
+ol_stats	A	Give suboption "list" to list various suboptions
+ol_wowl_cons	A	Give suboption "list" to list various suboptions
+olpc_anchoridx	D	Get the saved tx power idx and temperature at the olpc anchor power level:
+ota_loadtest	B	Usage: ota_loadtest [filename]
+ota_stream	B	Usage: wl ota_stream start : to start the test
+ota_teststatus	B	Usage: otatest_statusDisplays current running test detailsotatest_status ndisplays test argumen
+ota_teststop	B	Usage: ota_teststop
+otpdump	D	
+otpraw	D	Usage: wl otpraw <offset> <bits> [<data>]
+otpstat	D	
+otpw	D	Usage: wl otpw file
+out	B	On dualband cards, cards must be bandlocked before use.
+overlay	A	
+p2p_da_override	A	Get/Set WiFi P2P device interface addr
+p2p_if	A	Usage: wl p2p_if <MAC-address>
+p2p_ifadd	A	add WiFi P2P interface
+p2p_ifdel	A	delete WiFi P2P interface
+p2p_ifupd	A	update an interface to WiFi P2P interface
+p2p_noa	A	Usage: wl p2p_noa <type> <type-specific-params>
+p2p_ops	A	Usage: wl p2p_ops <ops> [<ctw>]
+p2p_scan	A	initiate WiFi P2P scan.
+p2p_ssid	A	set WiFi P2P wildcard ssid.
+p2p_state	A	set WiFi P2P discovery state.
+p2po_addsvc	A	add query-service pair
+p2po_delsvc	A	delete query-service pair
+p2po_find	B	start discovery
+p2po_find_config	B	set/get the parameters for the p2po_find command
+p2po_gas_config	A	set GAS state machine tunable parameters
+p2po_listen	B	start/get listen
+p2po_listen_channel	B	set listen channel to channel 1, 6, 11, or default
+p2po_results	A	Listens and displays P2PO results.
+p2po_sd_cancel	A	cancel finding a service
+p2po_sd_req_resp	A	find a service
+p2po_stop	B	stop both P2P listen and P2P device discovery offload
+p2po_wfds_advertise_del	C	usage: p2po_wfds_advertise_del <adv_hdl>
+p2po_wfds_seek_add	C	Set usage: p2po_wfds_seek_add <seek_hdl> <service_hash> <macaddr> <service_name> [service_info_
+p2po_wfds_seek_del	C	delete a WFDS service to seek
+p2po_wfds_seek_dump	A	dump WFDS services to seek
+passive	A	
+pavars	A	usage: wl down
+pcie_bus_tput	A	Measure the pcie bus througput
+pcieserdesreg	A	g/set SERDES registers: dev offset [val]
+perm_etheraddr	D	Get the permanent address from NVRAM
+pfn	A	pfn syntax is: pfn 0|1
+pfn_roam_alert_thresh	A	Get/Set PFN and roam alert threshold
+pfnadd	A	pfnadd syntax is: pfnadd ssid <SSID> [hidden (0)|1][imode (bss)|ibss][amode (open)|shared] [wpa
+pfnadd_bssid	A	Adding BSSID based preferred networks to monitor and connect
+pfnbest	A	pfnbest syntax is: pfnbest
+pfncfg	A	Usage: pfncfg [channel <list>] [report <type>] [prohibited 1|0]
+pfnclear	B	Clear the preferred network list
+pfneventchk	A	Listen and prints the preferred network off load event from dongle
+pfnlbest	A	Get the best n networks in each scan, up to m scans, with 32bit timestmp
+pfnmem	A	pfnmem syntax is: pfnmscan bestn [1-BESTN_MAX]
+pfnset	A	pfnset syntax is: pfnset [scanfrq xxxxx(30 sec)] [netimeout xxxx(60 sec)][slowfrq xxxx(180 sec)
+pfnsuspend	A	Suspend/resume pno scan
+phy_afeoverride	D	g/set AFE override
+phy_antsel	A	get/set antenna configuration
+phy_dyn_switch_th	A	Set wighting number for dynamic switch:
+phy_force_crsmin	A	Auto crsmin:
+phy_forceimpbf	A	force the beamformer into implicit TXBF mode and ready to construct steering matrix
+phy_forcesteer	A	force the beamformer to apply steering matrix when TXBF is turned on
+phy_read_estpwrlut	D	Read EstPwr LUT: wl phy_read_estpwrlut core
+phy_rssi_ant	A	Get RSSI per antenna (only gives RSSI of current antenna for SISO PHY)
+phy_rssi_gain_delta_2g	A	usage: phy_rssi_gain_delta_2g [val0 val1 ....]
+phy_rssi_gain_delta_2gb0	A	usage: phy_rssi_gain_delta_2gb0 [val0 val1 ....]
+phy_rssi_gain_delta_2gb1	A	usage: phy_rssi_gain_delta_2gb1 [val0 val1 ....]
+phy_rssi_gain_delta_2gb2	A	usage: phy_rssi_gain_delta_2gb2 [val0 val1 ....]
+phy_rssi_gain_delta_2gb3	A	usage: phy_rssi_gain_delta_2gb3 [val0 val1 ....]
+phy_rssi_gain_delta_2gb4	A	usage: phy_rssi_gain_delta_2gb4 [val0 val1 ....]
+phy_rssi_gain_delta_5gh	A	usage: phy_rssi_gain_delta_5gh [val0 val1 ....]
+phy_rssi_gain_delta_5gl	A	usage: phy_rssi_gain_delta_5gl [val0 val1 ....]
+phy_rssi_gain_delta_5gml	A	usage: phy_rssi_gain_delta_5gml [val0 val1 ....]
+phy_rssi_gain_delta_5gmu	A	usage: phy_rssi_gain_delta_5gmu [val0 val1 ....]
+phy_rssiant	A	wl phy_rssiant antindex(0-3)
+phy_rxgainerr_2g	A	usage: phy_rxgainerr_2g [val0 val1 ....]
+phy_rxgainerr_5gh	A	usage: phy_rxgainerr_5gmu [val0 val1 ....]
+phy_rxgainerr_5gl	A	usage: phy_rxgainerr_5gl [val0 val1 ....]
+phy_rxgainerr_5gm	A	usage: phy_rxgainerr_5gml [val0 val1 ....]
+phy_rxgainerr_5gu	A	usage: phy_rxgainerr_5gh [val0 val1 ....]
+phy_rxiqest	A	Get phy RX IQ noise in dBm:
+phy_setrptbl	D	populate the reciprocity compensation table based on SROM cal content
+phy_test_idletssi	D	get idletssi for the given core; wl phy_test_idletssi corenum
+phy_test_tssi	D	wl phy_test_tssi val
+phy_test_tssi_offs	D	wl phy_test_tssi_offs val
+phy_txiqcc	D	usage: phy_txiqcc [a b]
+phy_txlocc	D	usage: phy_txlocc [di dq ei eq fi fq]
+phy_txpwrindex	A	usage: (set) phy_txpwrindex core0_idx core1_idx core2_idx core3_idx (get) phy_txpwrindex,
+phy_vcore	D	get virtual core related capabilities
+phylist	A	
+phymsglevel	A	set phy debugging message bitvector
+phyreg	A	offset [ value ] [ band ]
+phytable	D	usage: wl phytable table_id offset width_of_table_element [table_element]
+phytype	A	
+pkt_filter_add	C	Install a packet filter.
+pkt_filter_clear_stats	B	Clear packet filter statistic counter values.
+pkt_filter_delete	A	Uninstall a packet filter.
+pkt_filter_enable	A	Enable/disable a packet filter.
+pkt_filter_list	A	List installed packet filters.
+pkt_filter_mode	A	Set packet filter match action.
+pkt_filter_ports	A	Set up additional port filters for TCP and UDP packets.
+pkt_filter_stats	A	Retrieve packet filter statistic counter values.
+pktcnt	A	
+pkteng_start	B	start packet engine tx usage: wl pkteng_start <xx:xx:xx:xx:xx:xx> <tx|txwithack> [(async)|sync]
+pkteng_stats	B	packet engine stats; usage: wl pkteng_stats
+pkteng_stop	B	stop packet engine; usage: wl pkteng_stop <tx|rx>
+pktq_stats	A	Dumps packet queue log info for [C] common, [A] AMPDU, [N] NAR or [P] power save queues
+plcphdr	A	"long" or "auto" or "debug"
+pm2_sleep_ret_ext	A	Get/Set Dynamic Fast Return To Sleep params
+pm_dur	A	
+pm_mute_tx	A	Sets parameters for power save mode with muted transmission path. Usage:
+pmac	A	usage: wl pmac <type> <addresses up to 16> -s <step size> -n <num> -b <bitmap> -w <write val> -
+pmkid_info	A	Returns the pmkid table
+povars	A	usage: wl down
+powerindex	C	Set the transmit power for A band(0-63).
+primary_key	A	Set or get index of primary key
+probe_resp_info	A	Returns the 802.11 management frame probe response information
+probresp_mac_filter	A	Set/Get MAC filter based Probe response mode.
+promisc	A	0 - disable
+protection_control	A	Get/Set protection mode control alg.(0=always off, 1=monitor local association, 2=monitor overl
+proxd	A	0 : disable
+proxd_bssid	A	Set/Get BSSID to be used in proximity detection frames
+proxd_collect	A	collect the debugging informations of Proximity Detection
+proxd_event_check	A	Listen and print Location Based Service events
+proxd_find	B	Start Proximity Detection
+proxd_mcastaddr	A	Set/Get Multicast MAC address of Proximity Detection Frames
+proxd_monitor	A	Monitor detected peer status in proximity
+proxd_params	A	Set/Get operational parameters for a method of Proximity Detection
+proxd_payload	A	Get/Set payload content transferred between the proximity detected peers
+proxd_report	A	Get/Set report distance results list
+proxd_status	A	Get status of Proximity Detection
+proxd_stop	B	Stop Proximity Detection
+proxd_tune	A	Set/Get tune parameters for TOF method of Proximity Detection
+pwr_percent	A	Get/Set power output percentage
+pwrstats	A	Get power usage statistics
+quiet	A	Usage: wl quiet <TBTTs until start>, <duration (in TUs)>, <offset (in TUs)>
+radar	A	
+radar_sc_status	A	Get/clear sc radar detection status
+radar_status	A	Get radar detection status
+radar_subband_status	A	Get/clear subband radar detection status
+radarargs	A	Get/Set Radar parameters in
+radarargs40	A	Get/Set Radar parameters for 40Mhz channel in
+radarthrs	A	Set Radar threshold for both 20 & 40MHz & 80MHz BW:
+radarthrs2	A	Set Radar threshold for both 20 & 40MHz & 80MHz BW:
+radio	A	"on" or "off"
+radioreg	D	Get/Set a radio register:
+rand	A	Usage: wl rand
+rate	A	valid values for 802.11a are (6, 9, 12, 18, 24, 36, 48, 54)
+rate_histo	A	Get rate hostrogram
+rateparam	A	set driver rate selection tunables
+rateset	A	With no args, returns the rateset. Args are
+ratetbl_ppr	A	Usage: For get: wl ratetbl_ppr
+rclass	A	chanspec
+rdvar	A	
+reassoc	A	Usage: wl reassoc <bssid> [options]
+reboot	B	
+regulatory	D	Get/Set regulatory domain mode (802.11d). Driver must be down.
+reinit	A	
+reset_cnts	B	Clear driver counter values
+reset_d11cnts	B	reset 802.11 MIB counters
+restart	B	
+revinfo	D	
+rifs	A	
+rifs_advert	A	set/get the rifs mode advertisement status; usage: wl rifs_advert <-1/0> (Auto/Off)
+rm_rep	A	
+rm_req	C	specify a series of measurement types each followed by options.
+rmc_ackmac	A	Set/Get ACK required multicast mac address
+rmc_ackreq	A	Set/Get ACK rmc_mode 0 disable, 1 enable transmitter, 2 enable initiator
+rmc_ar	A	If there is no match among current RMC receivers, it will return fail
+rmc_ar_timeout	A	Set/Get rmc active receiver timeout in ms
+rmc_rssi_delta	A	Display/Set RSSI delta to switch receive leader
+rmc_rssi_thresh	A	Set/Get minimum rssi needed for a station to be an active receiver
+rmc_stats	A	Display/Clear reliable multicast client statistical counters
+rmc_status	A	Display reliable multicast client status
+rmc_txrate	C	Set/Get a fixed transmit rate for the reliable multicast:
+rmc_vsie	A	Display/Set vendor specific IE contents
+rmwep	A	
+roam_channels_in_cache	A	Get a list of channels in roam cache
+roam_channels_in_hotlist	A	Get a list of channels in roam hot channel list
+roam_delta	A	Set the roam candidate qualification delta. roam_delta [integer [, a/b]]
+roam_prof	A	get/set roaming profiles (need to specify band)
+roam_scan_period	A	Set the roam candidate qualification delta. (integer)
+roam_trigger	A	Get or Set the roam trigger RSSI threshold:
+roamscan_parms	A	set/get roam scan parameters
+rpcalvars	D	Set/get temp RPCAL parameters
+rpmt	A	
+rrm	A	Usage: wl rrm [0/1] to disable/enable RRM feature
+rrm_bcn_req	C	send 11k beacon measurement request
+rrm_chload_req	C	send 11k channel load measurement request
+rrm_civic_req	C	Send 802.11k Location Civic request frame
+rrm_config	A	Configure information (LCI/Civic location) for self
+rrm_frame_req	C	send 11k frame measurement request
+rrm_lci_req	C	Send 802.11k Location Configuration Information (LCI) request frame
+rrm_lm_req	C	send 11k link measurement request
+rrm_locid_req	C	Send 802.11k Location Identifier request frame
+rrm_nbr_add_nbr	A	add node to 11k neighbor report list
+rrm_nbr_del_nbr	A	delete node from 11k neighbor report list
+rrm_nbr_list	A	get 11k neighbor report list
+rrm_nbr_req	C	send 11k neighbor report measurement request
+rrm_noise_req	C	send 11k noise measurement request
+rrm_stat_req	C	send 11k stat measurement request
+rrm_stat_rpt	A	Read 11k stat measurement report from STA
+rrm_txstrm_req	C	Send 802.11k Transmit Stream/Category measurement request frame
+rsdb_mode	A	Set/Get the RSDB mode. Possible values auto(-1), mimo(0), rsdb(1), 80p80(2)
+rssi	A	
+rssi_cal_freq_grp_2g	A	usage: wl_rssi_cal_freq_grp_2g [chan_1_2,chan_3_4,...,chan_13_14]
+rssi_event	A	Set parameters associated with RSSI event notification
+rts	A	
+rxmcsset	A	get Receive MCS rateset for 11N device
+sample_collect	A	Optional parameters ACPHY/HTPHY/(NPHY with NREV >= 7) are:
+sar_limit	D	Set/Get sar_limit
+sc_chan	A	20MHz : [2g|5g]<channel>[/20]
+scan	B	Default to an active scan across all channels for any SSID.
+scan_channel_time	B	Get/Set scan channel time
+scan_home_time	B	Get/Set scan home channel dwell time
+scan_nprobes	B	Get/Set scan parameter for number of probes to use per channel scanned
+scan_passive_time	B	Get/Set passive scan channel dwell time
+scan_ps	B	
+scan_unassoc_time	B	Get/Set unassociated scan channel dwell time
+scanabort	B	Abort a scan.
+scancache_clear	B	clear the scan cache
+scanmac	B	scanmac enable <0|1>
+scanresults	B	Return results from last scan.
+scansuppress	B	Suppress all scans for testing.
+scb_timeout	A	AP only: inactivity timeout value for authenticated stas
+send_nulldata	A	Sed a null frame to the specified hw address
+seq_delay	B	Driver should spin for the indicated amount of time.
+seq_error_index	B	Used to retrieve the index (starting at 1) of the command that failed within a batch
+seq_start	B	Initiates command batching sequence. Subsequent IOCTLs will be queued until
+seq_stop	B	Defines the end of command batching sequence. Queued IOCTLs will be executed.
+set_pmk	A	
+shmem	D	offset [ value ] [band ]
+shmemx	D	offset [ value ] [band ]
+shortslot	A	Get current 11g Short Slot Timing mode. (0=long, 1=short)
+shortslot_override	A	Get/Set 11g Short Slot Timing mode override. (-1=auto, 0=long, 1=short)
+shortslot_restrict	A	Get/Set AP Restriction on associations for 11g Short Slot Timing capable STAs.
+slowtimer	A	Deprecated. Use slow_timer.
+smfstats	A	get/clear selected management frame (smf) statswl smfstats [-C num]|[--cfg=num] [auth]|[assoc]|
+spatial_policy	A	set/get spatial_policy
+spect	A	0 - Off
+sr_dump_pmu	A	Dump value of PMU registers
+sr_pmu_keep_on	A	Keep resource on
+sr_power_island	A	Keep power islands on/off.
+srchmem	A	
+srclear	D	Usage: srclear <len>
+srcrc	A	
+srdump	A	
+srl	A	
+srwrite	D	
+ssid	A	wl ssid [-C num]|[--cfg=num] [<ssid>]
+sta_info	A	wl sta_info <xx:xx:xx:xx:xx:xx>
+sta_monitor	A	wl sta_monitor [enable|disable|counters|reset_cnts] | [<add/del> <xx:xx:xx:xx:xx:xx>]
+staname	A	Maximum name length is 15 bytes
+staprio	A	Usage: wl staprio <xx:xx:xx:xx:xx:xx> <prio>
+status	A	(also known as "assoc")
+suprates	A	Returns or sets the 11g override for the supported rateset
+svmp_mem	A	Usage: wl svmp_mem <offset> <len> [ <val> ]
+taf	A	wl taf <scheduler_id> [coeff [<coeff>]|dump|list]
+tbow_doho	A	Trigger the BT-WiFi handover/handback
+tclas_add	C	add tclas frame classifier type entry
+tclas_del	C	delete tclas frame classifier type entry
+tclas_list	A	list the added tclas frame classifier type entry
+tdls_endpoint	A	Available TDLS operations to each TDLS peer.
+tdls_sta_info	A	wl tdls_sta_info <xx:xx:xx:xx:xx:xx>
+tdls_wfd_ie	A	To set, get and clear additional WFD IE in setup_req and setup_resp
+tkip_countermeasures	B	Enable or disable TKIP countermeasures (TKIP-enabled AP only)
+toe	A	
+toe_ol	A	
+toe_stats	A	Display checksum offload statistics
+toe_stats_clear	B	Clear checksum offload statistics
+tpc_lm	A	
+tpc_mode	A	Enable/disable AP TPC.
+tpc_period	A	Set AP TPC periodicity in secs.
+trf_mgmt_bandwidth	A	Sets/gets traffic management bandwidth configuration.
+trf_mgmt_config	A	Sets/gets traffic management configuration.
+trf_mgmt_filters_add	C	Adds a traffic management filter.
+trf_mgmt_filters_addex	A	Adds a traffic management filter.
+trf_mgmt_filters_clear	B	Clears all traffic management filters.
+trf_mgmt_filters_list	A	Lists all traffic management filters.
+trf_mgmt_filters_remove	A	Removes a traffic management filter.
+trf_mgmt_filters_removeex	A	Removes a traffic management filter.
+trf_mgmt_flags	A	Sets/gets traffic management operational flags.
+trf_mgmt_shaping_info	A	Gets traffic management shaping parameters.
+trf_mgmt_stats	A	Gets traffic management statistics.
+trf_mgmt_stats_clear	B	Clears traffic management statistics.
+tsc	A	
+tsf	A	Usage: wl tsf [<high> <low>]
+tssi	A	
+txant	A	0 - force use of antenna 0
+txbf_rateset	A	Get rateset consisting of OFDM, HT and VHT rates, and Broadcom-to-Broadcom
+txcal_gainsweep	D	start Gain Sweep for TX Cal: wl txcal_gainsweep <xx:xx:xx:xx:xx:xx> [ipg] [len] [nframes] [gidx
+txcal_gainsweep_meas	D	Get TSSI/PWR measurments from last TX Cal Gain Sweep: wl txcal_gainsweep_meas
+txcal_pwr_tssi_tbl	D	Get the saved consolidated TSSI/PWR table: wl txcal_pwr_tssi_tbl <core> <chan>
+txchain_pwr_offset	A	Usage: wl txchain_pwr_offset [qdBm offsets]
+txcore	A	-k CCK core mask
+txcore_override	A	Usage: wl txcore_override
+txdelay_params	A	get chanim stats
+txfifo_sz	A	set/get the txfifo size; usage: wl txfifo_sz <fifonum> <size_in_bytes>
+txinstpwr	A	Return tx power based on instant TSSI
+txmcsset	C	get Transmit MCS rateset for 11N device
+txpathpwr	A	Turn the tx path power on or off on 2050 radios
+ucantdiv	D	Enable/disable ucode antenna diversity (1/0 or on/off)
+ucflags	A	offset [ value ] [ band ]
+up	B	
+upgrade	B	
+vasip_counters_clear	B	clear vasip counters
+ver	A	
+wake	A	0: core-managed
+wci2_config	A	Get/Set LTE coex MWS signaling config
+wds	A	Set using a space separated list of MAC addresses.
+wds_ap_ifname	A	Get associated AP interface name for WDS interface.
+wds_remote_mac	A	Get WDS link remote endpoint's MAC address
+wds_type	A	Indicate whether the interface to which this IOVAR is sent is of WDS or DWDS type.
+wds_wpa_role	A	Get/Set WDS link local endpoint's WPA role
+wds_wpa_role_old	A	Get WDS link local endpoint's WPA role (old)
+wepstatus	A	Set or Get WEP status
+wet	A	
+wlc_ver	A	
+wme	A	
+wme_ac	A	
+wme_apsd	A	Set APSD (Automatic Power Save Delivery) mode on AP (0=off, 1=on)
+wme_apsd_sta	A	Set APSD parameters on STA. Driver must be down.
+wme_apsd_trigger	A	Set Periodic APSD Trigger Frame Timer timeout in ms (0=off)
+wme_autotrigger	A	Enable/Disable sending of APSD Trigger frame when all ac are delivery enabled
+wme_clear_counters	A	clear WMM counters
+wme_counters	A	print WMM stats
+wme_dp	A	Usage: wl wme_dp <be> <bk> <vi> <vo>
+wme_maxbw_params	A	wl wme_maxbw_params [be|bk|vi|vo <value> ....]
+wme_tx_params	A	wl wme_tx_params [be|bk|vi|vo [short|sfb|long|lfb|max_rate <value>] ...]
+wnm	A	type 'wl msglevel ?' for values
+wnm_bsstq	C	send 11v BSS transition management query
+wnm_bsstrans_query	C	send 11v BSS transition management query
+wnm_bsstrans_req	C	send BSS transition management request frame with BSS termination included bit set
+wnm_bsstrans_roamthrottle	A	Get/Set number of roam scans allowed in throttle period
+wnm_bsstrans_rssi_rate_map	A	Get/Set rssi to rate map
+wnm_dms_set	A	Optionally add pending DMS desc (after tclas_add) and optionally register all desc
+wnm_dms_status	A	list all DMS descriptors and provide their internal and AP status
+wnm_dms_term	A	Disable registered DMS des on AP side and optionally discard them
+wnm_keepalives_max_idle	A	Usage: wl wnm_keepalives_max_idle <keepalives_per_bss_max_idle> <mkeepalive_index> [<max_interv
+wnm_maxidle	A	setup WNM BSS Max Idle Period interval and option
+wnm_service_term	A	Disable service. Check specific wnm_XXX_term for more info
+wnm_tfsreq_add	C	add one tfs request element and send tfs request frame
+wnm_timbc_offset	A	get/set TIM broadcast offset by -32768 period > offset(us) > 32768
+wnm_timbc_set	C	Enable/disable TIM Broadcast. Station will send appropriate request if AP suport TIMBC
+wnm_timbc_status	A	Retrieve TIM Broadcast configuration set with current AP
+wnm_url	A	Usage for set: wl wnm_url length urlstring
+wowl	A	0 - Clear all events
+wowl_bcn_loss	A	Set #of seconds of beacon loss for wakeup event
+wowl_ext_magic	A	Set 6-byte extended magic pattern
+wowl_pattern	A	usage: wowl_pattern [ [clr | [[ add | del ] offset mask value ]]]
+wowl_pkt	C	Send a wakeup frame to wakup a sleeping STA in WAKE mode
+wowl_status	A	usage: wowl_status [clear]
+wowl_wakeind	A	usage: wowl_wakeind [clear]
+wowl_wakeup_reason	A	Returns pattern id and associated wakeup reason
+wpa_auth	A	Bitvector of WPA authorization modes:
+wpa_cap	A	
+wrvar	A	
+wsec	A	1 - WEP enabled
+wsec_restrict	A	Drop unencrypted packets if WSEC is enabled
+wsec_test	A	Generate wsec errors

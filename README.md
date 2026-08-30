@@ -37,6 +37,7 @@ support this model, so all of this runs on what ASUS shipped.
 | [06-bittorrent.md](docs/06-bittorrent.md) | Transmission |
 | [07-rrd-history.md](docs/07-rrd-history.md) | long-term history |
 | [08-exposure.md](docs/08-exposure.md) | if it faces the internet |
+| [10-wl-commands.md](docs/10-wl-commands.md) | the radio control surface: 638 commands, tiered by what is safe to call |
 | [99-gotchas.md](docs/99-gotchas.md) | **the platform traps — read this before debugging anything** |
 
 Set your values in [CONFIG.md](CONFIG.md) first.
