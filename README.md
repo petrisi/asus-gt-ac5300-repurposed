@@ -39,6 +39,7 @@ support this model, so all of this runs on what ASUS shipped.
 | [08-exposure.md](docs/08-exposure.md) | if it faces the internet |
 | [10-wl-commands.md](docs/10-wl-commands.md) | the radio control surface: 638 commands, tiered by what is safe to call |
 | [wl-tier-a-catalog.md](reference/wl-tier-a-catalog.md) | catalogue of all 476 safely-readable wl commands, by function |
+| [wl-tier-bcd-catalog.md](reference/wl-tier-bcd-catalog.md) | the 160 wl commands that act, transmit or persist — and what each one costs |
 | [99-gotchas.md](docs/99-gotchas.md) | **the platform traps — read this before debugging anything** |
 
 Set your values in [CONFIG.md](CONFIG.md) first.

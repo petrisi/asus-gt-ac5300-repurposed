@@ -138,6 +138,18 @@ actually returned on this hardware, so you can see at a glance which commands ar
 live and which report `Unsupported`. Every family opens with a note on what it is
 for and which members are worth knowing.
 
+## The Tier B/C/D catalogue
+
+`reference/wl-tier-bcd-catalog.md` covers the other 160 commands — the ones that
+cannot be called blindly. **None of them were executed**; only `wl -h` was called.
+Tier A is documented by observation, B/C/D by reading, and that distinction is the
+point of the tiers.
+
+Each entry states what happens if you do run it, subgrouped by consequence:
+service-affecting versus counter resets in Tier B, transmitting versus
+argument-requiring in Tier C, and in Tier D by what gets written — non-volatile
+storage, calibration, regulatory limits, or raw hardware.
+
 ## Regenerating
 
     ./wl-inventory.sh > wl-commands.tsv          # inventory only, changes nothing
