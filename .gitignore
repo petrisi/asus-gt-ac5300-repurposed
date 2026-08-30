@@ -1,0 +1,4 @@
+*.bak
+*.orig
+*.tmp
+.DS_Store

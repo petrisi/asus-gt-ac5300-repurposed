@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Router status</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1: #fcfcfb; --plane: #f9f9f7;
+    --ink-1: #0b0b0b; --ink-2: #52514e; --ink-muted: #898781;
+    --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10);
+    --series-rx: #2a78d6; --series-tx: #eb6834;
+    --good: #0ca30c; --warning: #fab219; --critical: #d03b3b;
+    --help-bg: rgba(42,120,214,0.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --surface-1: #1a1a19; --plane: #0d0d0d;
+      --ink-1: #ffffff; --ink-2: #c3c2b7; --ink-muted: #898781;
+      --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+      --series-rx: #3987e5; --series-tx: #d95926;
+      --help-bg: rgba(57,135,229,0.10);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1: #1a1a19; --plane: #0d0d0d;
+    --ink-1: #ffffff; --ink-2: #c3c2b7; --ink-muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+    --series-rx: #3987e5; --series-tx: #d95926;
+    --help-bg: rgba(57,135,229,0.10);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 20px 48px; background: var(--plane); color: var(--ink-1);
+         font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .wrap { max-width: 1000px; margin: 0 auto; }
+
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; margin-bottom: 16px; }
+  h1 { font-size: 19px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+  .sub { color: var(--ink-2); font-size: 13px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--good);
+         display: inline-block; margin-right: 6px; vertical-align: 1px; }
+  .dot.stale { background: var(--critical); }
+
+  .toolbar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .btn { background: none; border: 1px solid var(--border); color: var(--ink-2); border-radius: 7px;
+         padding: 5px 11px; font: inherit; font-size: 12px; cursor: pointer; }
+  .btn:hover { color: var(--ink-1); }
+  .btn[aria-pressed="true"] { color: var(--ink-1); border-color: var(--series-rx); background: var(--help-bg); }
+
+  /* context-sensitive help */
+  .help { display: none; font-size: 12px; line-height: 1.5; color: var(--ink-2);
+          background: var(--help-bg); border-radius: 6px; padding: 8px 10px; margin-top: 10px; }
+  body.help-on .help { display: block; }
+  .hint { border-bottom: 1px dotted var(--ink-muted); cursor: help; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .tile .label { font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
+  .tile .value { font-size: 26px; font-weight: 600; line-height: 1.1; letter-spacing: -0.02em; }
+  .tile .unit { font-size: 14px; font-weight: 500; color: var(--ink-2); margin-left: 2px; }
+  .tile .note { font-size: 12px; color: var(--ink-muted); margin-top: 4px; }
+
+  .meter { height: 4px; border-radius: 2px; background: var(--grid); margin-top: 9px; overflow: hidden; }
+  .meter i { display: block; height: 100%; border-radius: 2px; background: var(--series-rx); width: 0; transition: width .4s; }
+  .meter i.warn { background: var(--warning); }
+  .meter i.crit { background: var(--critical); }
+
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .card h2 { font-size: 14px; font-weight: 600; margin: 0 0 2px; }
+  .card .cardsub { font-size: 12px; color: var(--ink-muted); margin-bottom: 12px; }
+
+  .legend { display: flex; gap: 18px; margin-bottom: 8px; flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-2); }
+  .swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+  .legend b { color: var(--ink-1); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .chart { width: 100%; height: 180px; display: block; touch-action: none; }
+  .chart text { font: 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: var(--ink-muted); font-variant-numeric: tabular-nums; }
+  .gridline { stroke: var(--grid); stroke-width: 1; }
+  .baseline { stroke: var(--axis); stroke-width: 1; }
+  .line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .crosshair { stroke: var(--axis); stroke-width: 1; stroke-dasharray: 3 3; }
+  .cursordot { stroke: var(--surface-1); stroke-width: 2; }
+
+  .cores { display: grid; gap: 8px; }
+  /* Header and rows share one column template so the two numeric columns are
+     FIXED WIDTH. Previously both numbers lived in a single right-aligned cell,
+     so the live value was shoved sideways every time a peak appeared or expired. */
+  .core, .corehead { display: grid; grid-template-columns: 54px 1fr 44px 44px;
+                     align-items: center; gap: 10px; font-size: 12px; }
+  .corehead { color: var(--ink-muted); font-size: 11px; margin-bottom: 6px; }
+  .corehead span:nth-child(3), .corehead span:nth-child(4) { text-align: right; }
+  .core .cl { color: var(--ink-2); }
+  .core .cv { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+  /* peak readout stays muted — it is context, not the live value */
+  .core .cx { text-align: right; font-variant-numeric: tabular-nums;
+              color: var(--ink-muted); font-size: 11px; }
+  .bar { position: relative; height: 10px; background: var(--grid); border-radius: 3px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--series-rx); border-radius: 0 4px 4px 0; width: 0; transition: width .4s; }
+  /* peak-hold tick: same hue as the bar, never a second colour — it is the same
+     measure at a different moment, not a second series. Opacity carries the age. */
+  .bar u { position: absolute; top: 0; bottom: 0; width: 2px; left: 0; opacity: 0;
+           background: var(--series-rx); border-radius: 1px;
+           transition: left .3s ease-out, opacity .6s linear; }
+
+  .kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 22px; font-size: 13px; }
+  .kv div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--grid); padding-bottom: 6px; }
+  .kv span { color: var(--ink-2); }
+  .kv b { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* column glossary inside a help block */
+  .gloss { display: grid; gap: 8px; margin-top: 4px; }
+  .gloss > div { display: grid; grid-template-columns: 76px 1fr; gap: 12px; align-items: start; }
+  .gloss b { color: var(--ink-1); font-weight: 600; }
+  @media (max-width: 560px) { .gloss > div { grid-template-columns: 1fr; gap: 2px; } }
+
+  .tip { position: fixed; pointer-events: none; z-index: 10; background: var(--surface-1);
+         border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px;
+         box-shadow: 0 4px 14px rgba(0,0,0,0.16); display: none; white-space: nowrap; }
+  .tip .t { color: var(--ink-muted); margin-bottom: 4px; }
+  .tip .r { display: flex; align-items: center; gap: 7px; }
+  .tip .r b { margin-left: auto; font-variant-numeric: tabular-nums; }
+
+  table { border-collapse: collapse; width: 100%; margin-top: 12px; font-size: 12px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 5px 8px; border-bottom: 1px solid var(--grid); }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--ink-2); font-weight: 600; }
+  .hidden { display: none; }
+  /* ---------------- History (RRD-backed, optional layer) ----------------
+     Series colours are fixed mid-tones rather than theme variables: they must
+     stay distinguishable from each other on BOTH light and dark backgrounds,
+     and a five-line CPU chart needs more distinct hues than the two-series
+     live charts ever required. */
+  :root { --h0:#2a78d6; --h1:#eb6834; --h2:#2e9e6b; --h3:#9b59b6; --h4:#b8860b; }
+  .hbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 2px 0 16px; }
+  .hbar .spacer { margin-left: auto; }
+  .hgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 4px 22px; }
+  .hblock { min-width: 0; }        /* lets grid children shrink instead of overflowing */
+  .hblock h3 { font-size: 13px; font-weight: 600; margin: 14px 0 2px; color: var(--ink-1); }
+  .chart.sm { height: 132px; }
+  .hnote { font-size: 12px; color: var(--ink-muted); margin: 6px 0 0; }
+  .hwarn { font-size: 12px; padding: 8px 10px; border-radius: 6px;
+           background: var(--help-bg); color: var(--ink-1); margin: 0 0 14px; }
+  .hoff { padding: 18px 2px; color: var(--ink-muted); font-size: 13px; line-height: 1.55; }
+  #histtot td:first-child { color: var(--ink-muted); }
+  #histtot td { font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1 id="model">Router</h1>
+    <span class="sub"><span class="dot" id="dot"></span><span id="conn">connecting…</span></span>
+    <span class="sub" style="margin-left:auto"><span class="hint" title="Router's own clock and timezone, kept in sync by ntp.">🕐</span> <span id="clock">–</span></span>
+    <span class="sub" id="uptime"></span>
+  </header>
+
+  <div class="toolbar">
+    <button class="btn" id="hbtn" aria-pressed="false">Show help</button>
+    <button class="btn" id="tbtn" aria-pressed="false">Show data table</button>
+  </div>
+
+  <div class="tiles">
+    <div class="tile">
+      <div class="label"><span class="hint" title="Aggregate CPU across all cores, from /proc/stat jiffy deltas.">CPU</span></div>
+      <div class="value"><span id="cpu">–</span><span class="unit">%</span></div>
+      <div class="note" id="load"></div>
+      <div class="help">Aggregated across all CPU cores. Idle sits near 0–2% on an unloaded router. Sustained load usually means traffic has fallen off the hardware fast path and the CPU is forwarding packets in software.</div>
+    </div>
+    <div class="tile">
+      <div class="label"><span class="hint" title="SoC sensor (broadcomThermalDrv) — the only thermal zone this firmware exposes.">CPU temperature</span></div>
+      <div class="value"><span id="temp">–</span><span class="unit">°C</span></div>
+      <div class="note">broadcomThermalDrv</div>
+      <div class="help">The only thermal zone the firmware exposes. Mid-40s °C is normal at idle — this model is passively cooled. Per-radio temperatures exist but are reachable only from ASUS's own web server.</div>
+    </div>
+    <div class="tile">
+      <div class="label"><span class="hint" title="Based on MemAvailable, so reclaimable cache counts as free.">Memory used</span></div>
+      <div class="value"><span id="mem">–</span><span class="unit">%</span></div>
+      <div class="meter"><i id="mem-bar"></i></div>
+      <div class="note" id="memnote"></div>
+      <div class="help">Based on <code>MemAvailable</code>, so reclaimable page cache counts as free. Kernel slab is unusually large on Broadcom firmware (~240 MB) — those are packet-accelerator buffers, not a leak.</div>
+    </div>
+    <div class="tile">
+      <div class="label"><span class="hint" title="Entries in the netfilter conntrack table.">Connections</span></div>
+      <div class="value" id="ct">–</div>
+      <div class="note" id="ctnote"></div>
+      <div class="help">Entries in the netfilter connection-tracking table. Every active flow through the router takes one. Exhaustion makes new connections fail outright; normal home use stays in the hundreds, far below the 300,000 ceiling.</div>
+    </div>
+    <div class="tile">
+      <div class="label"><span class="hint" title="Packets hitting the router's own INPUT chain that matched a DROP rule.">Blocked inbound</span></div>
+      <div class="value" id="fwr">–</div>
+      <div class="note" id="fwnote"></div>
+      <div class="help">Packets that hit the router's own INPUT chain and matched a DROP rule — traffic aimed <em>at</em> the router, not through it. Most is ordinary broadcast and discovery noise from the upstream network. A sustained spike means something is probing the box.</div>
+    </div>
+    <div class="tile">
+      <div class="label"><span class="hint" title="ARP neighbours currently cached.">Known hosts</span></div>
+      <div class="value" id="arp">–</div>
+      <div class="note">ARP neighbours</div>
+      <div class="help">Devices in the router's ARP cache — a rough count of what it has spoken to recently, not a live client list. It counts anything the router has exchanged traffic with, including its own upstream gateway, so it is never zero on a connected box.</div>
+    </div>
+    <div class="tile">
+      <div class="label"><span class="hint" title="ASUS stores all configuration in a fixed-size NVRAM area.">NVRAM used</span></div>
+      <div class="value"><span id="nv">–</span><span class="unit">%</span></div>
+      <div class="meter"><i id="nv-bar"></i></div>
+      <div class="note" id="nvnote"></div>
+      <div class="help">ASUS keeps all configuration in a fixed-size NVRAM area. Filling it makes settings <em>silently fail to save</em> — a well-known failure mode on these routers. Worth watching if you add many rules, clients or port forwards.</div>
+    </div>
+    <div class="tile">
+      <div class="label"><span class="hint" title="Capacity of the attached USB volume. Reported as 'not attached' when absent — the dashboard never depends on the stick being present.">USB storage</span></div>
+      <div class="value"><span id="usb">–</span><span class="unit" id="usbunit">%</span></div>
+      <div class="meter" id="usb-meter"><i id="usb-bar"></i></div>
+      <div class="note" id="usbnote"></div>
+      <div class="help">Capacity of the USB volume mounted at <code>/tmp/usb</code>, holding Entware and the torrent data. <b>Nothing on this page depends on it</b> — if the stick is pulled the tile reads "not attached" and everything else carries on, because the collector checks the mount table before touching the path (calling <code>df</code> on a stale mount point can block indefinitely).</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>WAN throughput</h2>
+    <div class="cardsub">eth0 — WAN uplink</div>
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--series-rx)"></i>Download <b id="lw-rx">–</b></span>
+      <span><i class="swatch" style="background:var(--series-tx)"></i>Upload <b id="lw-tx">–</b></span>
+    </div>
+    <svg class="chart" id="chart-wan" preserveAspectRatio="none"></svg>
+    <div class="help">Byte counters for <code>eth0</code>. Caveat: Broadcom's flow accelerator can handle forwarded traffic in hardware and bypass kernel accounting, so check these against a known transfer before trusting absolute figures. Traffic terminating on the router itself (SSH, this page) is always counted.</div>
+  </div>
+
+  <div class="card">
+    <h2>LAN throughput</h2>
+    <div class="cardsub">br0 — LAN bridge</div>
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--series-rx)"></i>Received <b id="ll-rx">–</b></span>
+      <span><i class="swatch" style="background:var(--series-tx)"></i>Transmitted <b id="ll-tx">–</b></span>
+    </div>
+    <svg class="chart" id="chart-lan" preserveAspectRatio="none"></svg>
+    <div class="help">Byte counters for the <code>br0</code> bridge spanning the eight LAN ports. Reads zero whenever nothing is plugged in. Per-port breakdown isn't available on this platform: it uses the rdpa/runner datapath, so the switch-MIB commands that would provide it report "no switch connected".</div>
+  </div>
+
+  <div class="card">
+    <h2>Firewall drops</h2>
+    <div class="cardsub">packets per minute matching a DROP in the INPUT chain, averaged over 30s</div>
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--series-rx)"></i>Blocked inbound <b id="lf">–</b></span>
+    </div>
+    <svg class="chart" id="chart-fw" preserveAspectRatio="none"></svg>
+    <div class="help">Rate of packets dropped by the router's own INPUT chain. The counters are cumulative since boot; this charts the delta. Forwarded-traffic drops are tracked separately in the System card below and stay at zero until clients are routing through the box.</div>
+  </div>
+
+  <div class="card">
+    <h2>Per-core utilisation</h2>
+    <div class="cardsub" id="coresub">CPU cores</div>
+    <div class="corehead"><span></span><span></span><span>now</span><span>peak</span></div>
+    <div class="cores" id="cores"></div>
+    <div class="help">
+      Routers frequently peg a <em>single</em> core while the aggregate looks idle — one core handling a flow the hardware accelerator couldn't take. That's invisible in the CPU tile, which is why the split is shown separately.
+      <br><br>
+      The thin <b>peak-hold tick</b> on each bar marks the highest value that core reached in the last 60 seconds; the same figure appears in the <b>peak</b> column. Both numeric columns are fixed width, so nothing shifts when a peak appears or expires. Because samples arrive every 2 seconds, a spike can start and finish between glances — the tick keeps it visible after the bar has already dropped back.
+      <b>Its brightness is its age:</b> a sharp, bright tick means the peak happened moments ago; a faint one means it is nearly a minute old and probably not what you are currently looking at. Once the peak ages out of the window, or the live value catches up to it, the tick disappears.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Wireless radios</h2>
+    <div class="cardsub">from the closed-source Broadcom <code>wl</code> driver — refreshed every 30 s</div>
+    <table>
+      <thead><tr>
+        <th><span class="hint" title="Which radio. This is a tri-band device: one 2.4 GHz and two independent 5 GHz radios, each with its own channel and clients.">Band</span></th>
+        <th><span class="hint" title="Whether the radio is transmitting. Read from the wl driver, which returns a DISABLE mask — 0x0000 means ON.">State</span></th>
+        <th><span class="hint" title="Network name currently broadcast by this radio. All three can share one SSID or differ.">SSID</span></th>
+        <th><span class="hint" title="Primary channel and width, e.g. 60/80 = channel 60 at 80 MHz. Chosen by acsd when set to auto.">Channel</span></th>
+        <th><span class="hint" title="Measured noise floor in dBm. More negative is better: around −90 is clean, above roughly −80 is a noisy environment.">Noise</span></th>
+        <th><span class="hint" title="Share of airtime in use (100 − idle), including other networks on the same channel. Sustained high values mean congestion, not a fault.">Busy</span></th>
+        <th><span class="hint" title="PHY decode errors since the radio came up. Cumulative, so judge the rate of climb, not the total.">Glitches</span></th>
+        <th><span class="hint" title="Devices currently associated with this radio. Per-client signal strength becomes available once clients connect.">Clients</span></th>
+      </tr></thead>
+      <tbody id="radiobody"></tbody>
+    </table>
+    <div class="help">
+      All of this comes from the closed-source Broadcom <code>wl</code> driver, which exposes a surprising amount read-only. Hover any column heading for a short version.
+      <div class="gloss">
+        <div><b>Band</b><span>Tri-band hardware: one 2.4 GHz radio and <em>two independent</em> 5 GHz radios, each with its own channel, airtime and clients. They are separate radios, not one band split in two.</span></div>
+        <div><b>State</b><span>Whether the radio is transmitting. Worth knowing that <code>wl radio</code> returns a <em>disable</em> mask — <code>0x0000</code> means ON, <code>0x0001</code> means off. Easy to read backwards.</span></div>
+        <div><b>Channel</b><span>Primary channel and width — <code>60/80</code> is channel 60 at 80 MHz. Selected by <code>acsd</code> when the band is set to auto. On 5 GHz many channels are DFS, where the radio must monitor for radar and may move on its own.</span></div>
+        <div><b>Noise</b><span>Measured noise floor in dBm; more negative is better. Around <b>−90</b> is a clean band, <b>−80 or above</b> means a congested or electrically noisy environment. This is the floor your signal has to rise above, so it caps achievable range and speed regardless of transmit power.</span></div>
+        <div><b>Busy</b><span>Share of airtime already in use, derived as <code>100 − idle</code> from <code>chanim_stats</code>. Critically this includes <em>other people's</em> networks on the same channel — high busy with zero clients of your own is neighbouring traffic, not a fault here. Wi-Fi is half-duplex, so busy airtime directly reduces what your own clients can get.</span></div>
+        <div><b>Glitches</b><span>PHY-layer decode errors counted since the radio started. The number is cumulative, so a large total on a long-running radio is normal — <em>rate of climb</em> is the signal. Fast growth points at interference on that channel (often non-Wi-Fi sources) rather than at any client.</span></div>
+        <div><b>Clients</b><span>Devices currently associated with this radio, from <code>assoclist</code>. Once clients connect, per-device signal strength and rates become readable via <code>sta_info</code>.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>DHCP server</h2>
+    <div class="cardsub" id="dhcpsub">–</div>
+    <table>
+      <thead><tr><th>IP address</th><th>MAC</th><th>Hostname</th><th><span class="hint" title="Time left on the lease. ASUS builds dnsmasq with HAVE_BROKEN_RTC, so the lease file stores seconds REMAINING rather than an absolute expiry time — because these devices boot with an unreliable clock.">Lease remaining</span></th></tr></thead>
+      <tbody id="leasebody"></tbody>
+    </table>
+    <div class="help">
+      Leases handed out by this router's own <code>dnsmasq</code> on its LAN subnet (<span id="lansub">–</span>), read from <code>/var/lib/misc/dnsmasq.leases</code>.
+      This list is empty until something connects to a LAN port or an enabled radio.
+      When this router runs in wireless-router mode, clients leasing here sit behind its own NAT and firewall — isolated from whatever network its WAN port is plugged into. In access-point mode there is no such separation and this table stays empty, since an upstream server hands out the addresses instead.
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>System</h2>
+    <div class="cardsub">refreshed every 2 s; NVRAM, hosts, flash and rule counts every 30 s</div>
+    <div class="kv">
+      <div><span class="hint" title="Total sockets allocated across all protocols and both address families.">Sockets in use</span><b id="k-sock">–</b></div>
+      <div><span class="hint" title="TCP sockets in use, IPv4 / IPv6. From /proc/net/sockstat and sockstat6 — these are separate files; sockstat alone is IPv4 only.">TCP v4 / v6</span><b id="k-tcp">–</b></div>
+      <div><span class="hint" title="UDP sockets in use, IPv4 / IPv6. BitTorrent uses UDP for DHT and uTP as well as TCP.">UDP v4 / v6</span><b id="k-udp">–</b></div>
+      <div><span class="hint" title="Established TCP connections only, IPv4 / IPv6 — the count that reflects real active peers rather than listeners and time-waits.">Established v4 / v6</span><b id="k-est">–</b></div>
+      <div><span class="hint" title="Kernel context switches per second.">Context switches</span><b id="k-ctxt">–</b></div>
+      <div><span class="hint" title="Hardware interrupts per second.">Interrupts</span><b id="k-intr">–</b></div>
+      <div><span class="hint" title="Processes in the run queue right now.">Runnable procs</span><b id="k-prun">–</b></div>
+      <div><span class="hint" title="Kernel entropy pool, in bits.">Entropy available</span><b id="k-ent">–</b></div>
+      <div><span class="hint" title="Reclaimable page cache.">Page cache</span><b id="k-cached">–</b></div>
+      <div><span class="hint" title="Kernel slab — mostly packet-accelerator buffers on this firmware.">Kernel slab</span><b id="k-slab">–</b></div>
+      <div><span class="hint" title="Writable flash partition holding the portal and scripts.">/jffs used</span><b id="k-jffs">–</b></div>
+      <div><span class="hint" title="Flows currently handled in hardware by the Broadcom Packet Flow Cache.">Accelerated flows</span><b id="k-flows">–</b></div>
+      <div><span class="hint" title="Cumulative packets dropped by the INPUT chain since boot.">Blocked inbound (total)</span><b id="k-fwin">–</b></div>
+      <div><span class="hint" title="Cumulative packets dropped by the FORWARD chain since boot.">Blocked forwarded</span><b id="k-fwfw">–</b></div>
+      <div><span class="hint" title="iptables rules in the filter table.">Filter rules</span><b id="k-rf">–</b></div>
+      <div><span class="hint" title="iptables rules in nat / mangle / raw.">NAT / mangle / raw</span><b id="k-rn">–</b></div>
+      <div><span class="hint" title="Model reported by the firmware.">Model</span><b id="k-model">–</b></div>
+      <div><span class="hint" title="Kernel hostname.">Hostname</span><b id="k-name">–</b></div>
+      <div><span class="hint" title="Running firmware version.">Firmware</span><b id="k-fw">–</b></div>
+      <div><span class="hint" title="This router's own LAN address and mask.">LAN address</span><b id="k-lan">–</b></div>
+    </div>
+    <div class="help">
+      <b>Blocked inbound</b> counts packets aimed at the router itself; <b>blocked forwarded</b> counts traffic it refused to route onward — the latter is the interesting one once this box has clients behind it.
+      <b>Accelerated flows</b> are connections the Broadcom Packet Flow Cache is handling in hardware; traffic terminating on the router is never accelerated, so it reads 0 until clients forward through.
+      <b>Rule counts</b> are ASUS-generated — 100+ filter rules is normal, and the count jumping is a useful signal that something rewrote the firewall.
+      <br><br>
+      <b>IPv4 vs IPv6.</b> The kernel keeps these in separate files (<code>/proc/net/sockstat</code> and <code>sockstat6</code>), and the firewall keeps them in separate tables (<code>iptables</code> and <code>ip6tables</code>) — a rule on one has no effect on the other.
+      <b>Sockets in use</b> counts listeners, half-open and time-wait sockets as well as live ones, so it always exceeds <b>Established</b>. The established split is the honest measure of how many peers are actually connected over each protocol, which on a dual-stack seed is the number worth watching: if the v6 share is zero while IPv6 is up, the v6 firewall is probably blocking the peer port.
+    </div>
+  </div>
+
+    <div class="card" id="histcard">
+    <h2>History</h2>
+    <div class="cardsub" id="histsub">long-term trends</div>
+
+    <div class="hbar">
+      <button class="btn hwin" data-w="day"   aria-pressed="true">24 hours</button>
+      <button class="btn hwin" data-w="week"  aria-pressed="false">7 days</button>
+      <button class="btn hwin" data-w="month" aria-pressed="false">30 days</button>
+      <button class="btn hwin" data-w="year"  aria-pressed="false">1 year</button>
+      <span class="sub spacer" id="histage"></span>
+    </div>
+
+    <!-- Shown only when the RRDs are unreachable. The charts are hidden rather
+         than drawn empty, because an empty chart reads as "nothing happened"
+         when the truth is "we have no idea". -->
+    <div id="histoff" class="hoff hidden"></div>
+
+    <div id="histbody">
+      <div id="histstale" class="hwarn hidden"></div>
+
+      <div class="hblock">
+        <h3>WAN throughput</h3>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--series-rx)"></i>Download <b id="ht-wrx">–</b></span>
+          <span><i class="swatch" style="background:var(--series-tx)"></i>Upload <b id="ht-wtx">–</b></span>
+        </div>
+        <svg class="chart" id="hchart-wan" preserveAspectRatio="none"></svg>
+      </div>
+
+      <div class="hblock">
+        <h3>BitTorrent peer-port traffic</h3>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--series-tx)"></i>Out TCP <b id="ht-but">–</b></span>
+          <span><i class="swatch" style="background:var(--h4)"></i>Out UDP <b id="ht-buu">–</b></span>
+          <span><i class="swatch" style="background:var(--series-rx)"></i>In TCP <b id="ht-bdt">–</b></span>
+          <span><i class="swatch" style="background:var(--h2)"></i>In UDP <b id="ht-bdu">–</b></span>
+        </div>
+        <svg class="chart" id="hchart-bt" preserveAspectRatio="none"></svg>
+        <div class="hnote"><b>This is not payload throughput.</b> It is every byte crossing port 51413, counted at the firewall — and that port carries the DHT as well as transfers. With 4 peers connected and Transmission reporting no upload at all, outbound UDP still ran at 27.7 kB/s against 5.2 kB/s of TCP: that traffic is DHT chatter, which never goes quiet. TCP tracks actual peer transfers reasonably well; UDP mixes µTP transfers with DHT and the two cannot be separated at the packet level. For volume, read the totals below, which come from Transmission itself.</div>
+      </div>
+
+      <div class="hblock">
+        <h3>LAN throughput</h3>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--series-rx)"></i>Received <b id="ht-lrx">–</b></span>
+          <span><i class="swatch" style="background:var(--series-tx)"></i>Transmitted <b id="ht-ltx">–</b></span>
+        </div>
+        <svg class="chart" id="hchart-lan" preserveAspectRatio="none"></svg>
+      </div>
+
+      <h3 style="margin-top:22px">Transfer totals</h3>
+      <table id="histtot">
+        <thead><tr><th>&nbsp;</th><th>24 hours</th><th>7 days</th><th>30 days</th></tr></thead>
+        <tbody id="httbody"></tbody>
+      </table>
+      <div class="hnote" id="histcov"></div>
+
+      <div class="hblock">
+        <h3>CPU</h3>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--h0)"></i>Aggregate <b id="ht-cpu">–</b></span>
+          <span><i class="swatch" style="background:var(--h1)"></i>Core 0</span>
+          <span><i class="swatch" style="background:var(--h2)"></i>Core 1</span>
+          <span><i class="swatch" style="background:var(--h3)"></i>Core 2</span>
+          <span><i class="swatch" style="background:var(--h4)"></i>Core 3</span>
+        </div>
+        <svg class="chart" id="hchart-cpu" preserveAspectRatio="none"></svg>
+      </div>
+
+      <div class="hgrid">
+        <div class="hblock">
+          <h3>CPU temperature</h3>
+          <svg class="chart sm" id="hchart-temp" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="hblock">
+          <h3>Memory used</h3>
+          <svg class="chart sm" id="hchart-mem" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="hblock">
+          <h3>Connections</h3>
+          <svg class="chart sm" id="hchart-conn" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="hblock">
+          <h3>DHCP leases</h3>
+          <svg class="chart sm" id="hchart-lease" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="hblock">
+          <h3>NVRAM used</h3>
+          <svg class="chart sm" id="hchart-nv" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="hblock">
+          <h3>USB storage used</h3>
+          <svg class="chart sm" id="hchart-usb" preserveAspectRatio="none"></svg>
+        </div>
+      </div>
+
+      <div class="hblock">
+        <h3>System load</h3>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--h0)"></i>1 min <b id="ht-l1">–</b></span>
+          <span><i class="swatch" style="background:var(--h1)"></i>5 min</span>
+          <span><i class="swatch" style="background:var(--h2)"></i>15 min</span>
+        </div>
+        <svg class="chart" id="hchart-load" preserveAspectRatio="none"></svg>
+        <div class="hnote">Run-queue depth, not utilisation. CPU% saturates at 100 and cannot express a backlog — this box has reached a load of 19.5 on four cores while the CPU tile still looked survivable.</div>
+      </div>
+
+      <div class="hblock">
+        <h3>Round-trip time</h3>
+        <div class="legend">
+          <span><i class="swatch" style="background:var(--h0)"></i>Gateway <b id="ht-rtt-gw">–</b></span>
+          <span><i class="swatch" style="background:var(--h1)"></i>1.1.1.1 <b id="ht-rtt-c1">–</b></span>
+          <span><i class="swatch" style="background:var(--h2)"></i>8.8.8.8 <b id="ht-rtt-g8">–</b></span>
+        </div>
+        <svg class="chart" id="hchart-rtt" preserveAspectRatio="none"></svg>
+        <div class="hnote">Three ICMP probes a minute to each target, sampled by a detached script so a black-holed target can never stall the collector. Gateway latency isolates the local link; the two public resolvers show whether a problem is yours or upstream.</div>
+      </div>
+
+      <div class="hgrid">
+        <div class="hblock">
+          <h3>Packet loss</h3>
+          <div class="legend"><span><i class="swatch" style="background:var(--h0)"></i>GW</span><span><i class="swatch" style="background:var(--h1)"></i>1.1.1.1</span><span><i class="swatch" style="background:var(--h2)"></i>8.8.8.8</span></div>
+          <svg class="chart sm" id="hchart-loss" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="hblock">
+          <h3>Jitter <span class="hint" title="Spread between the fastest and slowest probe in each sample. This build of ping reports no mean deviation, so max-minus-min stands in for it.">(max − min)</span></h3>
+          <div class="legend"><span><i class="swatch" style="background:var(--h0)"></i>GW</span><span><i class="swatch" style="background:var(--h1)"></i>1.1.1.1</span><span><i class="swatch" style="background:var(--h2)"></i>8.8.8.8</span></div>
+          <svg class="chart sm" id="hchart-jit" preserveAspectRatio="none"></svg>
+        </div>
+      </div>
+
+      <h3 style="margin-top:22px">Exposure and security</h3>
+      <div class="hgrid">
+        <div class="hblock">
+          <h3>Blocked inbound</h3>
+          <svg class="chart sm" id="hchart-drops" preserveAspectRatio="none"></svg>
+          <div class="hnote">Packets the INPUT chain refused. On a public address this is a scanning-pressure curve.</div>
+        </div>
+        <div class="hblock">
+          <h3>Rejected SSH logins</h3>
+          <svg class="chart sm" id="hchart-ssh" preserveAspectRatio="none"></svg>
+          <div class="hnote">Attempts for users that do not exist. Counted from syslog, so rotation shows as one gap. This is how you measure whether moving off port 22 helped.</div>
+        </div>
+        <div class="hblock">
+          <h3>Established peers, v4 vs v6</h3>
+          <div class="legend"><span><i class="swatch" style="background:var(--series-rx)"></i>IPv4 <b id="ht-est4">–</b></span><span><i class="swatch" style="background:var(--h2)"></i>IPv6 <b id="ht-est6">–</b></span></div>
+          <svg class="chart sm" id="hchart-est" preserveAspectRatio="none"></svg>
+          <div class="hnote">IPv6 falling to zero while the address is still up means the v6 peer port broke — otherwise invisible until you go looking.</div>
+        </div>
+        <div class="hblock">
+          <h3>Firewall rule count</h3>
+          <div class="legend"><span><i class="swatch" style="background:var(--h0)"></i>filter</span><span><i class="swatch" style="background:var(--h1)"></i>nat</span><span><i class="swatch" style="background:var(--h2)"></i>mangle</span><span><i class="swatch" style="background:var(--h3)"></i>raw</span></div>
+          <svg class="chart sm" id="hchart-rules" preserveAspectRatio="none"></svg>
+          <div class="hnote">A step change means something rewrote the firewall.</div>
+        </div>
+      </div>
+
+      <h3 style="margin-top:22px">Services and stability</h3>
+      <div class="hgrid">
+        <div class="hblock">
+          <h3>Service uptime</h3>
+          <div class="legend"><span><i class="swatch" style="background:var(--h0)"></i>Transmission</span><span><i class="swatch" style="background:var(--h1)"></i>Web server</span><span><i class="swatch" style="background:var(--h2)"></i>Collector</span></div>
+          <svg class="chart sm" id="hchart-svc" preserveAspectRatio="none"></svg>
+          <div class="hnote">1 = running. The collector is judged by whether its output is <em>fresh</em>, not by whether the process exists — a hung collector stays in the process table indefinitely, which is exactly how one sat wedged for 3.4 days.</div>
+        </div>
+        <div class="hblock">
+          <h3>Time since WAN address changed</h3>
+          <svg class="chart sm" id="hchart-wanip" preserveAspectRatio="none"></svg>
+          <div class="hnote">Resets to zero whenever the public address moves. DNS records for this host are updated by hand, so a reset marks the moment they went stale.</div>
+        </div>
+        <div class="hblock">
+          <h3>BitTorrent peers</h3>
+          <svg class="chart sm" id="hchart-peers" preserveAspectRatio="none"></svg>
+          <div class="hnote">Established connections on the peer port — the context that explains a change in transfer rate.</div>
+        </div>
+        <div class="hblock">
+          <h3>Interface errors and drops</h3>
+          <div class="legend"><span><i class="swatch" style="background:var(--h0)"></i>WAN drop</span><span><i class="swatch" style="background:var(--h1)"></i>WAN err</span><span><i class="swatch" style="background:var(--h2)"></i>LAN drop</span><span><i class="swatch" style="background:var(--h3)"></i>LAN err</span></div>
+          <svg class="chart sm" id="hchart-iferr" preserveAspectRatio="none"></svg>
+        </div>
+      </div>
+
+      <h3 style="margin-top:22px">Wireless</h3>
+      <div class="hgrid">
+        <div class="hblock">
+          <h3>Noise floor</h3>
+          <div class="legend"><span><i class="swatch" style="background:var(--h0)"></i>2.4</span><span><i class="swatch" style="background:var(--h1)"></i>5-1</span><span><i class="swatch" style="background:var(--h2)"></i>5-2</span></div>
+          <svg class="chart sm" id="hchart-noise" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="hblock">
+          <h3>Glitches</h3>
+          <div class="legend"><span><i class="swatch" style="background:var(--h0)"></i>2.4</span><span><i class="swatch" style="background:var(--h1)"></i>5-1</span><span><i class="swatch" style="background:var(--h2)"></i>5-2</span></div>
+          <svg class="chart sm" id="hchart-glitch" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="hblock">
+          <h3>Channel idle</h3>
+          <div class="legend"><span><i class="swatch" style="background:var(--h0)"></i>2.4</span><span><i class="swatch" style="background:var(--h1)"></i>5-1</span><span><i class="swatch" style="background:var(--h2)"></i>5-2</span></div>
+          <svg class="chart sm" id="hchart-idle" preserveAspectRatio="none"></svg>
+          <div class="hnote">Share of airtime the radio saw as free. Falling idle with rising glitches is interference rather than your own traffic.</div>
+        </div>
+        <div class="hblock">
+          <h3>Wireless clients</h3>
+          <div class="legend"><span><i class="swatch" style="background:var(--h0)"></i>2.4</span><span><i class="swatch" style="background:var(--h1)"></i>5-1</span><span><i class="swatch" style="background:var(--h2)"></i>5-2</span></div>
+          <svg class="chart sm" id="hchart-wcli" preserveAspectRatio="none"></svg>
+        </div>
+      </div>
+
+      <h3 style="margin-top:22px">Kernel and storage</h3>
+      <div class="hgrid">
+        <div class="hblock">
+          <h3>Page cache and slab</h3>
+          <div class="legend"><span><i class="swatch" style="background:var(--h2)"></i>Cached</span><span><i class="swatch" style="background:var(--h3)"></i>Slab</span></div>
+          <svg class="chart sm" id="hchart-memd" preserveAspectRatio="none"></svg>
+          <div class="hnote">Slab is mostly packet-accelerator buffers here; steady growth that never returns would indicate a leak.</div>
+        </div>
+        <div class="hblock">
+          <h3>Context switches and interrupts</h3>
+          <div class="legend"><span><i class="swatch" style="background:var(--h0)"></i>ctx/s</span><span><i class="swatch" style="background:var(--h1)"></i>intr/s</span></div>
+          <svg class="chart sm" id="hchart-kern" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="hblock">
+          <h3>Runnable processes</h3>
+          <svg class="chart sm" id="hchart-prun" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="hblock">
+          <h3>/jffs used</h3>
+          <svg class="chart sm" id="hchart-jffs" preserveAspectRatio="none"></svg>
+          <div class="hnote">This flash is never being reflashed; scripts and logs only accumulate.</div>
+        </div>
+        <div class="hblock">
+          <h3>Known hosts (ARP)</h3>
+          <svg class="chart sm" id="hchart-arp" preserveAspectRatio="none"></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="help">
+      History is recorded with <code>rrdtool</code> into round-robin databases on the USB stick, sampled once a minute. Round-robin means fixed size forever: older data is consolidated rather than accumulated, so a year of history costs the same ~1.8 MB as the first day.
+      <br><br>
+      <b>This layer is optional by design.</b> The live dashboard above reads only <code>status.json</code> from RAM and has no dependency on the USB stick or Entware. Remove the stick and everything above keeps working; only this section goes away.
+      <br><br>
+      <b>Gaps are real.</b> A missing minute is stored as <i>unknown</i>, not as zero, and is drawn as a break in the line. If the collector stalls, you see a hole rather than a flat line that looks like a genuinely idle router — a distinction this box has needed more than once.
+      <br><br>
+      <b>Resolution falls with age</b>, which is how the fixed size is achieved: 1-minute detail for 24 hours, 5-minute for a week, 30-minute for a month, 6-hour for a year. A brief spike visible in the 24-hour view is averaged away in the yearly one — that is consolidation working, not data loss.
+      <br><br>
+      <b>Transfer totals</b> integrate the recorded rates over each window. <b>Coverage</b> states what fraction of that window actually holds data: a total spanning an outage under-reports, and coverage is how you tell.
+      <br><br>
+      <b>BitTorrent is measured two ways, and neither is the whole story.</b> The <i>totals</i> come from Transmission's own lifetime counters: authoritative for payload volume, but written to disk only every few minutes, so a rate derived from them is a row of spikes separated by zeroes rather than a line. The <i>peer-port chart</i> instead reads firewall byte counters, which advance continuously.
+      <br><br>
+      What the chart measures is <b>traffic on port 51413, not transfers</b>. Two effects pull in opposite directions. It <i>over</i>-counts because the DHT shares that port and never idles — measured at 27.7 kB/s of outbound UDP while Transmission reported zero upload. It also <i>under</i>-counts, because connections this router opens outward carry an ephemeral source port that no port-based rule can match; against Transmission's figures the inbound counters caught only ~53% of a download, which was dominated by outbound-initiated peers. Read it as "what BitTorrent is putting on the wire", and read the totals for how much was actually transferred.
+    </div>
+  </div>
+
+<div id="tblwrap" class="hidden">
+    <div class="card">
+      <h2>Recent samples</h2>
+      <div class="cardsub">last 30 samples, newest first</div>
+      <table>
+        <thead><tr><th>Time</th><th>CPU %</th><th>Temp °C</th><th>Conn</th><th>Drops/min</th><th>WAN down</th><th>WAN up</th><th>LAN rx</th><th>LAN tx</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="tip" id="tip"></div>
+</div>
+
+<script>
+const MAX = 150;               // 150 samples x 2s = 5 minutes
+const hist = [];
+const NS = "http://www.w3.org/2000/svg";
+const RX = "--series-rx", TX = "--series-tx";
+
+// EVERY formatter here must tolerate FRACTIONAL input.
+//
+// The sub-1000 branch used to be a bare `b + " B/s"`, which is a string
+// concatenation, not a format: it printed whatever precision the number carried.
+// That went unnoticed because the live path mostly yields whole bytes, but a rate
+// is bytes divided by elapsed seconds and history values are consolidated
+// averages, so rrdtool hands back 137.67333333333335 where the live view showed
+// 138 -- and all 17 digits were rendered.
+//
+// Rounding belongs HERE, not in the collector: status.json's full precision is
+// what the RRDs consolidate from, so it is worth keeping at the source and
+// trimming only at the point of display. Note fmtAxisRate below already rounded
+// in its own sub-1000 branch, which is why the axis ticks looked correct while
+// the tooltips and legends did not.
+const fmtRate = b => b < 1000 ? Math.round(b) + " B/s"
+  : b < 1000000 ? (b / 1024).toFixed(1) + " KB/s"
+  : (b / 1048576).toFixed(2) + " MB/s";
+const fmtPps = p => Math.round(p).toLocaleString() + " pkt/min";
+
+// Axis-tick formatters, deliberately SHORTER than the tooltip/legend ones.
+// Ticks are right-anchored inside a fixed left margin, so an over-long label runs
+// off the left edge of the viewBox and gets clipped -- "100.73 MB/s" rendered as
+// "0.73 MB/s". Keep these terse; full precision belongs in the tooltip.
+const fmtAxisRate = b => {
+  if (b < 1000) return Math.round(b) + " B/s";
+  if (b < 1000000) { const k = b / 1024; return (k >= 100 ? Math.round(k) : k.toFixed(1)) + " KB/s"; }
+  const m = b / 1048576; return (m >= 100 ? Math.round(m) : m.toFixed(1)) + " MB/s";
+};
+// bare number: the unit is already stated in the card subtitle and the legend,
+// so repeating "pkt/min" on every tick only risks clipping
+const fmtAxisCount = n => n >= 1000 ? Math.round(n).toLocaleString() : String(Math.round(n));
+// Math.round for the same reason as fmtRate: history feeds this consolidated
+// averages (connection counts, DHCP leases), and toLocaleString on 1893.4567
+// yields "1,893.457".
+const fmtN = n => Math.round(n).toLocaleString();
+const fmtMB = kb => (kb / 1024).toFixed(0) + " MB";
+// KB in -> human out, scaling to GB once large enough (USB volumes are tens of GB)
+const fmtKB = kb => kb >= 1048576 ? (kb / 1048576).toFixed(1) + " GB"
+                  : kb >= 1024    ? (kb / 1024).toFixed(0) + " MB"
+                                  : kb + " KB";
+const fmtUp = s => {
+  s = Math.floor(s);
+  const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+  return (d ? d + "d " : "") + h + "h " + m + "m";
+};
+const el = id => document.getElementById(id);
+
+function niceMax(v) {
+  if (v <= 0) return 1;
+  const mag = Math.pow(10, Math.floor(Math.log10(v)));
+  const n = v / mag;
+  return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * mag;
+}
+function setMeter(node, pct) {
+  node.style.width = Math.max(0, Math.min(100, pct)) + "%";
+  node.className = pct >= 90 ? "crit" : pct >= 75 ? "warn" : "";
+}
+
+// series: [{ label, get(d), col }]   fmt: value formatter
+function draw(svgId, series, fmt, axisFmt) {
+  axisFmt = axisFmt || fmt;
+  const svg = el(svgId);
+  const W = svg.clientWidth || 900, H = svg.clientHeight || 180;
+  // L must be wide enough for the longest axis label: ticks are right-anchored at
+  // (L - 8) and grow leftward, so anything wider than that is clipped by the viewBox.
+  const L = 76, R = 8, T = 10, B = 20;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  if (hist.length < 2) return;
+
+  const data = series.map(s => hist.map(s.get));
+  const top = niceMax(Math.max(1, ...data.flat()));
+  const x = i => L + (W - L - R) * (i / (MAX - 1));
+  const y = v => T + (H - T - B) * (1 - v / top);
+
+  for (let g = 0; g <= 2; g++) {
+    const v = top * g / 2, yy = y(v);
+    const ln = document.createElementNS(NS, "line");
+    ln.setAttribute("x1", L); ln.setAttribute("x2", W - R);
+    ln.setAttribute("y1", yy); ln.setAttribute("y2", yy);
+    ln.setAttribute("class", g === 0 ? "baseline" : "gridline");
+    svg.appendChild(ln);
+    const lb = document.createElementNS(NS, "text");
+    lb.setAttribute("x", L - 8); lb.setAttribute("y", yy + 4);
+    lb.setAttribute("text-anchor", "end"); lb.textContent = axisFmt(v);
+    svg.appendChild(lb);
+  }
+  const t0 = document.createElementNS(NS, "text");
+  t0.setAttribute("x", L); t0.setAttribute("y", H - 4); t0.textContent = "5 min ago";
+  svg.appendChild(t0);
+  const t1 = document.createElementNS(NS, "text");
+  t1.setAttribute("x", W - R); t1.setAttribute("y", H - 4);
+  t1.setAttribute("text-anchor", "end"); t1.textContent = "now";
+  svg.appendChild(t1);
+
+  const off = MAX - hist.length;
+  data.forEach((arr, k) => {
+    const p = document.createElementNS(NS, "path");
+    p.setAttribute("d", arr.map((v, i) => (i ? "L" : "M") + x(i + off).toFixed(1) + " " + y(v).toFixed(1)).join(" "));
+    p.setAttribute("class", "line");
+    p.setAttribute("stroke", `var(${series[k].col})`);
+    svg.appendChild(p);
+  });
+
+  const ch = document.createElementNS(NS, "line");
+  ch.setAttribute("class", "crosshair"); ch.setAttribute("y1", T); ch.setAttribute("y2", H - B);
+  ch.style.display = "none"; svg.appendChild(ch);
+  const dots = series.map(() => {
+    const c = document.createElementNS(NS, "circle");
+    c.setAttribute("r", 4); c.setAttribute("class", "cursordot");
+    c.style.display = "none"; svg.appendChild(c); return c;
+  });
+
+  svg.onpointermove = ev => {
+    const bb = svg.getBoundingClientRect();
+    const px = (ev.clientX - bb.left) * (W / bb.width);
+    let i = Math.round((px - L) / (W - L - R) * (MAX - 1)) - off;
+    i = Math.max(0, Math.min(hist.length - 1, i));
+    const xx = x(i + off);
+    ch.setAttribute("x1", xx); ch.setAttribute("x2", xx); ch.style.display = "";
+    data.forEach((arr, k) => {
+      dots[k].setAttribute("cx", xx); dots[k].setAttribute("cy", y(arr[i]));
+      dots[k].setAttribute("fill", `var(${series[k].col})`); dots[k].style.display = "";
+    });
+    const tip = el("tip");
+    tip.innerHTML = `<div class="t">${(hist.length - 1 - i) * 2}s ago</div>` +
+      series.map((s, k) => `<div class="r"><i class="swatch" style="background:var(${s.col})"></i>${s.label}<b>${fmt(data[k][i])}</b></div>`).join("");
+    tip.style.display = "block";
+    tip.style.left = Math.min(ev.clientX + 14, innerWidth - tip.offsetWidth - 8) + "px";
+    tip.style.top = (ev.clientY + 14) + "px";
+  };
+  svg.onpointerleave = () => {
+    ch.style.display = "none";
+    dots.forEach(d => d.style.display = "none");
+    el("tip").style.display = "none";
+  };
+}
+
+const S_WAN = [{ label: "Download", get: d => d.wan.rx, col: RX }, { label: "Upload", get: d => d.wan.tx, col: TX }];
+const S_LAN = [{ label: "Received", get: d => d.lan.rx, col: RX }, { label: "Transmitted", get: d => d.lan.tx, col: TX }];
+const S_FW  = [{ label: "Blocked inbound", get: d => d.fw.inr, col: RX }];
+
+// Peak-hold on the per-core bars.
+//
+// A 2s poll renders instantaneous values, so short spikes are invisible — a core
+// can hit 80% and be back at 3% before you look. The tick marks the highest value
+// in the trailing window and its opacity encodes how long ago that happened, so an
+// old peak can't masquerade as a current one.
+//
+// Derived entirely from the existing history buffer: no collector change, no extra
+// state, and it rebuilds itself after a page reload as samples arrive.
+const PEAK_SAMPLES = 30;   // 30 x 2s = 60s window
+const PEAK_MIN_OPACITY = 0.15;
+
+let coresBuilt = false;
+function drawCores(cores) {
+  if (!coresBuilt) {
+    el("cores").innerHTML = cores.map((_, i) =>
+      `<div class="core"><span class="cl">core ${i}</span>` +
+      `<div class="bar"><i id="cb${i}"></i><u id="cp${i}"></u></div>` +
+      `<span class="cv" id="cn${i}">0%</span>` +
+      `<span class="cx" id="cx${i}"></span></div>`
+    ).join("");
+    coresBuilt = true;
+  }
+
+  const recent = hist.slice(-PEAK_SAMPLES);
+
+  cores.forEach((v, i) => {
+    const cur = Math.max(0, Math.min(100, v));
+    el("cb" + i).style.width = cur + "%";
+    el("cn" + i).textContent = v + "%";
+
+    // newest occurrence of the max wins, so a repeated peak reads as fresh
+    let peak = 0, peakIdx = -1;
+    for (let k = 0; k < recent.length; k++) {
+      const cv = (recent[k].cores || [])[i] || 0;
+      if (cv >= peak) { peak = cv; peakIdx = k; }
+    }
+
+    const tick = el("cp" + i);
+    if (peakIdx < 0 || peak <= v) {
+      // nothing above the live value — the bar already shows it
+      tick.style.opacity = 0;
+      el("cx" + i).textContent = "";
+      return;
+    }
+    const ageFrac = Math.min(1, (recent.length - 1 - peakIdx) / PEAK_SAMPLES);
+    const p = Math.max(0, Math.min(100, peak));
+    tick.style.left = `calc(${p}% - 2px)`;
+    tick.style.opacity = Math.max(PEAK_MIN_OPACITY, 1 - ageFrac * (1 - PEAK_MIN_OPACITY));
+    el("cx" + i).textContent = peak + "%";   // column is labelled in the header
+  });
+}
+
+function renderTable() {
+  if (el("tblwrap").classList.contains("hidden")) return;
+  el("tbody").innerHTML = hist.slice(-30).reverse().map(d =>
+    `<tr><td>${new Date(d.ts * 1000).toLocaleTimeString()}</td><td>${d.cpu}</td>` +
+    `<td>${(d.temp_m / 1000).toFixed(1)}</td><td>${d.ct.c}</td><td>${d.fw.inr}</td>` +
+    `<td>${fmtRate(d.wan.rx)}</td><td>${fmtRate(d.wan.tx)}</td>` +
+    `<td>${fmtRate(d.lan.rx)}</td><td>${fmtRate(d.lan.tx)}</td></tr>`
+  ).join("");
+}
+
+function renderRadios(radios) {
+  el("radiobody").innerHTML = radios.map(r => {
+    if (!r.on) {
+      return `<tr><td>${r.band}</td><td style="color:var(--ink-muted)">disabled</td>` +
+             `<td colspan="6" style="color:var(--ink-muted)">radio off — no telemetry</td></tr>`;
+    }
+    const busy = Math.max(0, 100 - r.idle);
+    return `<tr><td>${r.band}</td><td style="color:var(--good)">on</td><td>${r.ssid || "–"}</td>` +
+           `<td>${r.ch || "–"}</td><td>${r.noise} dBm</td><td>${busy}%</td>` +
+           `<td>${fmtN(r.glitch)}</td><td>${r.clients}</td></tr>`;
+  }).join("");
+}
+
+// ASUS compiles dnsmasq with HAVE_BROKEN_RTC, so field 1 of the lease file is
+// SECONDS REMAINING, not a Unix timestamp -- these devices boot with an unreliable
+// clock, so durations survive it where absolute times would not. Treating it as an
+// epoch produced "2 January 1970" for every lease.
+//
+// The >1e9 branch keeps this correct if it ever runs against a stock dnsmasq that
+// does write absolute timestamps.
+function fmtLease(v) {
+  v = Number(v) || 0;
+  if (v > 1e9) return new Date(v * 1000).toLocaleString();   // absolute epoch
+  if (v <= 0) return "never";                                // 0 = infinite lease
+  const d = Math.floor(v / 86400), h = Math.floor(v % 86400 / 3600), m = Math.floor(v % 3600 / 60);
+  return (d ? d + "d " : "") + (d || h ? h + "h " : "") + m + "m";
+}
+
+function renderLeases(dh) {
+  el("dhcpsub").textContent = (dh.on ? "enabled" : "disabled") +
+    ` · pool ${dh.start} – ${dh.end} · lease ${Math.round(dh.lease / 3600)} h · ${dh.n} active`;
+  el("leasebody").innerHTML = dh.n
+    ? dh.leases.map(l =>
+        `<tr><td>${l.ip}</td><td>${l.mac}</td><td>${l.host || "–"}</td>` +
+        `<td>${fmtLease(l.exp)}</td></tr>`).join("")
+    : `<tr><td colspan="4" style="color:var(--ink-muted)">no active leases</td></tr>`;
+}
+
+function paint(d) {
+  // device identity is read from the router, so nothing here is hardcoded to one deployment
+  el("model").textContent = d.host.model;
+  if (document.title !== d.host.model + " — status") document.title = d.host.model + " — status";
+  el("coresub").textContent = d.cores.length + " CPU cores";
+  el("lansub").textContent = d.host.lan + " / " + d.host.mask;
+  el("k-model").textContent = d.host.model;
+  el("k-name").textContent = d.host.name;
+  el("k-fw").textContent = d.host.fw;
+  el("k-lan").textContent = d.host.lan;
+  el("clock").textContent = d.clock + " " + d.tz;
+  renderRadios(d.radios);
+  renderLeases(d.dhcp);
+  el("cpu").textContent = d.cpu;
+  el("load").textContent = "load " + d.load;
+  el("temp").textContent = (d.temp_m / 1000).toFixed(1);
+
+  const usedKb = d.mem.t - d.mem.a, usedPct = Math.round(usedKb / d.mem.t * 100);
+  el("mem").textContent = usedPct;
+  setMeter(el("mem-bar"), usedPct);
+  el("memnote").textContent = fmtMB(usedKb) + " of " + fmtMB(d.mem.t);
+
+  el("ct").textContent = fmtN(d.ct.c);
+  el("ctnote").textContent = "of " + fmtN(d.ct.m) + " max";
+
+  el("fwr").textContent = d.fw.inr;
+  el("fwnote").textContent = "pkt/min · " + fmtN(d.fw.inp) + " total";
+
+  el("arp").textContent = d.slow.arp;
+
+  const nvTot = d.slow.nvu + d.slow.nvf;
+  const nvPct = nvTot ? Math.round(d.slow.nvu / nvTot * 100) : 0;
+  el("nv").textContent = nvPct;
+  setMeter(el("nv-bar"), nvPct);
+  el("nvnote").textContent = fmtN(d.slow.nvf) + " bytes free";
+
+  // USB is optional by design: absence is a displayed state, never an error.
+  const u = d.usb || { on: 0 };
+  if (u.on && u.t > 0) {
+    const upct = Math.round(u.u / u.t * 100);
+    el("usb").textContent = upct;
+    el("usbunit").style.display = "";
+    el("usb-meter").style.display = "";
+    setMeter(el("usb-bar"), upct);
+    el("usbnote").textContent = fmtKB(u.u) + " of " + fmtKB(u.t) + " · " + fmtKB(u.a) + " free";
+  } else {
+    el("usb").textContent = "–";
+    el("usbunit").style.display = "none";
+    el("usb-meter").style.display = "none";
+    el("usbnote").textContent = "not attached";
+  }
+
+  el("uptime").textContent = "up " + fmtUp(d.up);
+  el("lw-rx").textContent = fmtRate(d.wan.rx);
+  el("lw-tx").textContent = fmtRate(d.wan.tx);
+  el("ll-rx").textContent = fmtRate(d.lan.rx);
+  el("ll-tx").textContent = fmtRate(d.lan.tx);
+  el("lf").textContent = fmtPps(d.fw.inr);
+
+  el("k-sock").textContent = fmtN(d.sock.all);
+  el("k-tcp").textContent = d.sock.tcp + " / " + (d.sock.tcp6 || 0);
+  el("k-udp").textContent = d.sock.udp + " / " + (d.sock.udp6 || 0);
+  // established is the honest "how many real peers" number; the v6 share is the
+  // interesting part on a dual-stack seed, so it is spelled out rather than left
+  // for the reader to divide
+  const e4 = d.sock.est4 || 0, e6 = d.sock.est6 || 0, et = e4 + e6;
+  el("k-est").textContent = e4 + " / " + e6 + (et ? "  (" + Math.round(e6 / et * 100) + "% v6)" : "");
+  el("k-ctxt").textContent = fmtN(d.sys.ctxt) + "/s";
+  el("k-intr").textContent = fmtN(d.sys.intr) + "/s";
+  el("k-prun").textContent = d.sys.prun;
+  el("k-ent").textContent = fmtN(d.sys.ent) + " bits";
+  el("k-cached").textContent = fmtMB(d.mem.cached);
+  el("k-slab").textContent = fmtMB(d.mem.slab);
+  el("k-jffs").textContent = fmtMB(d.slow.ju) + " of " + fmtMB(d.slow.jt);
+  el("k-flows").textContent = d.slow.flows < 0 ? "n/a" : fmtN(d.slow.flows);
+  el("k-fwin").textContent = fmtN(d.fw.inp) + " pkt";
+  el("k-fwfw").textContent = fmtN(d.fw.fwp) + " pkt";
+  el("k-rf").textContent = d.slow.rf;
+  el("k-rn").textContent = d.slow.rn + " / " + d.slow.rm + " / " + d.slow.rr;
+
+  drawCores(d.cores);
+  draw("chart-wan", S_WAN, fmtRate, fmtAxisRate);
+  draw("chart-lan", S_LAN, fmtRate, fmtAxisRate);
+  draw("chart-fw", S_FW, fmtPps, fmtAxisCount);
+  renderTable();
+}
+
+// Staleness is judged on whether the sample TIMESTAMP advances, not on whether the
+// fetch succeeds. A hung collector leaves a perfectly servable status.json behind,
+// which would otherwise render as "live" indefinitely — the worst failure mode for
+// a monitoring page. Elapsed browser time is used rather than comparing the router
+// clock to the browser clock, so skew between the two can't cause false alarms.
+const STALE_MS = 15000;
+let fails = 0, lastTs = 0, lastChange = 0;
+
+const fmtAge = s => s < 90 ? Math.round(s) + "s"
+  : s < 5400 ? Math.round(s / 60) + " min"
+  : s < 172800 ? (s / 3600).toFixed(1) + " h"
+  : (s / 86400).toFixed(1) + " days";
+
+async function poll() {
+  try {
+    const r = await fetch("/data/status.json?_=" + Date.now(), { cache: "no-store" });
+    const d = await r.json();
+    const now = Date.now();
+
+    if (d.ts !== lastTs) { lastTs = d.ts; lastChange = now; }
+
+    // On first load the file may already be ancient; the elapsed-time check can't
+    // know that yet, so fall back to the router's own timestamp once, generously.
+    const firstLoadStale = !hist.length && (now / 1000 - d.ts) > 120;
+    const stalledS = lastChange ? (now - lastChange) / 1000 : 0;
+    const stale = firstLoadStale || (now - lastChange) > STALE_MS;
+
+    if (!hist.length || d.ts !== hist[hist.length - 1].ts) {
+      hist.push(d);
+      if (hist.length > MAX) hist.shift();
+    }
+    fails = 0;
+
+    if (stale) {
+      el("dot").classList.add("stale");
+      const age = firstLoadStale ? (now / 1000 - d.ts) : stalledS;
+      el("conn").textContent = "data stale — no update for " + fmtAge(age);
+    } else {
+      el("dot").classList.remove("stale");
+      el("conn").textContent = "live";
+    }
+    paint(d);
+  } catch (e) {
+    if (++fails > 2) {
+      el("dot").classList.add("stale");
+      el("conn").textContent = "collector not responding";
+    }
+  }
+}
+
+el("hbtn").onclick = () => {
+  const on = document.body.classList.toggle("help-on");
+  el("hbtn").textContent = on ? "Hide help" : "Show help";
+  el("hbtn").setAttribute("aria-pressed", on);
+};
+el("tbtn").onclick = () => {
+  const hidden = el("tblwrap").classList.toggle("hidden");
+  el("tbtn").textContent = hidden ? "Show data table" : "Hide data table";
+  el("tbtn").setAttribute("aria-pressed", !hidden);
+  renderTable();
+};
+addEventListener("resize", () => {
+  // History charts are sized from clientWidth too, so they need the same redraw.
+  // Guarded separately: the live charts and the history charts can each be
+  // present without the other.
+  if (typeof drawHistCharts === "function" && histData) drawHistCharts();
+  if (!hist.length) return;
+  draw("chart-wan", S_WAN, fmtRate, fmtAxisRate);
+  draw("chart-lan", S_LAN, fmtRate, fmtAxisRate);
+  draw("chart-fw", S_FW, fmtPps, fmtAxisCount);
+});
+
+/* =======================================================================
+   History (RRD)
+
+   Separate from the live path on purpose. It fetches its own files, keeps its
+   own state, and every failure mode here is contained: if the exports are
+   missing the section hides itself and `poll()` above is entirely unaffected.
+   ======================================================================= */
+
+let histWin = "day", histData = null, histTotals = null;
+
+const fmtBytes = b =>
+    b >= 1e12 ? (b / 1e12).toFixed(2) + " TB" :
+    b >= 1e9  ? (b / 1e9).toFixed(2)  + " GB" :
+    b >= 1e6  ? (b / 1e6).toFixed(1)  + " MB" :
+    b >= 1e3  ? (b / 1e3).toFixed(1)  + " kB" : Math.round(b) + " B";
+
+const fmtTemp  = v => v.toFixed(1) + " °C";
+const fmtAxisT = v => v.toFixed(0) + "°";
+
+const WINLABEL = { day: "24 hours", week: "7 days", month: "30 days", year: "1 year" };
+
+function fmtWhen(ts) {
+  const d = new Date(ts * 1000);
+  const hm = String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  return histWin === "day" ? hm
+       : d.getDate() + " " + d.toLocaleString(undefined, { month: "short" }) + " " + hm;
+}
+
+// Array-based twin of draw(). It cannot share code with draw() because that one
+// reads objects out of the live `hist` ring buffer via accessor functions, while
+// these are plain arrays that may contain nulls.
+function drawH(svgId, series, fmt, axisFmt) {
+  axisFmt = axisFmt || fmt;
+  const svg = el(svgId);
+  if (!svg) return;
+  const W = svg.clientWidth || 900, H = svg.clientHeight || 180;
+  const L = 76, R = 8, T = 10, B = 20;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  if (!histData || !histData.series) return;
+
+  const data = series.map(s => histData.series[s.key] || []);
+  const n = Math.max(0, ...data.map(a => a.length));
+  const flat = data.flat().filter(v => v !== null && isFinite(v));
+
+  if (n < 2 || !flat.length) {
+    const t = document.createElementNS(NS, "text");
+    t.setAttribute("x", L); t.setAttribute("y", H / 2);
+    t.textContent = "no data recorded yet for this window";
+    svg.appendChild(t);
+    return;
+  }
+
+  // Scale must tolerate NEGATIVE series: the wireless noise floor lives around
+  // -90 dBm, and a fixed zero baseline would push every sample off the bottom of
+  // the viewBox and draw an apparently empty chart.
+  const lo = Math.min(...flat), hi = Math.max(...flat);
+  let bottom = 0, top;
+  if (lo < 0) {
+    bottom = -niceMax(-lo);
+    top = hi > 0 ? niceMax(hi) : 0;
+  } else {
+    top = niceMax(Math.max(1, hi));
+  }
+  if (top <= bottom) top = bottom + 1;
+
+  const x = i => L + (W - L - R) * (i / (n - 1));
+  const y = v => T + (H - T - B) * (1 - (v - bottom) / (top - bottom));
+
+  for (let g = 0; g <= 2; g++) {
+    const v = bottom + (top - bottom) * g / 2, yy = y(v);
+    const ln = document.createElementNS(NS, "line");
+    ln.setAttribute("x1", L); ln.setAttribute("x2", W - R);
+    ln.setAttribute("y1", yy); ln.setAttribute("y2", yy);
+    ln.setAttribute("class", g === 0 ? "baseline" : "gridline");
+    svg.appendChild(ln);
+    const lb = document.createElementNS(NS, "text");
+    lb.setAttribute("x", L - 8); lb.setAttribute("y", yy + 4);
+    lb.setAttribute("text-anchor", "end"); lb.textContent = axisFmt(v);
+    svg.appendChild(lb);
+  }
+
+  const t0s = histData.generated - histData.span;
+  const t0 = document.createElementNS(NS, "text");
+  t0.setAttribute("x", L); t0.setAttribute("y", H - 4);
+  t0.textContent = fmtWhen(t0s);
+  svg.appendChild(t0);
+  const t1 = document.createElementNS(NS, "text");
+  t1.setAttribute("x", W - R); t1.setAttribute("y", H - 4);
+  t1.setAttribute("text-anchor", "end"); t1.textContent = "now";
+  svg.appendChild(t1);
+
+  // A null lifts the pen. Bridging a gap would draw a straight line across an
+  // outage and present invented data as measurement.
+  data.forEach((arr, k) => {
+    let d = "", pen = false;
+    arr.forEach((v, i) => {
+      if (v === null || !isFinite(v)) { pen = false; return; }
+      d += (pen ? "L" : "M") + x(i).toFixed(1) + " " + y(v).toFixed(1) + " ";
+      pen = true;
+    });
+    if (!d) return;
+    const p = document.createElementNS(NS, "path");
+    p.setAttribute("d", d.trim());
+    p.setAttribute("class", "line");
+    p.setAttribute("stroke", `var(${series[k].col})`);
+    svg.appendChild(p);
+  });
+
+  const ch = document.createElementNS(NS, "line");
+  ch.setAttribute("class", "crosshair"); ch.setAttribute("y1", T); ch.setAttribute("y2", H - B);
+  ch.style.display = "none"; svg.appendChild(ch);
+  const dots = series.map(() => {
+    const c = document.createElementNS(NS, "circle");
+    c.setAttribute("r", 4); c.setAttribute("class", "cursordot");
+    c.style.display = "none"; svg.appendChild(c); return c;
+  });
+
+  svg.onpointermove = ev => {
+    const bb = svg.getBoundingClientRect();
+    const px = (ev.clientX - bb.left) * (W / bb.width);
+    let i = Math.round((px - L) / (W - L - R) * (n - 1));
+    i = Math.max(0, Math.min(n - 1, i));
+    const xx = x(i);
+    ch.setAttribute("x1", xx); ch.setAttribute("x2", xx); ch.style.display = "";
+    data.forEach((arr, k) => {
+      const v = arr[i];
+      if (v === null || v === undefined || !isFinite(v)) { dots[k].style.display = "none"; return; }
+      dots[k].setAttribute("cx", xx); dots[k].setAttribute("cy", y(v));
+      dots[k].setAttribute("fill", `var(${series[k].col})`); dots[k].style.display = "";
+    });
+    const tip = el("tip");
+    tip.innerHTML = `<div class="t">${fmtWhen(t0s + i * histData.step)}</div>` +
+      series.map((s, k) => {
+        const v = data[k][i];
+        const shown = (v === null || v === undefined || !isFinite(v)) ? "no data" : fmt(v);
+        return `<div class="r"><i class="swatch" style="background:var(${s.col})"></i>${s.label}<b>${shown}</b></div>`;
+      }).join("");
+    tip.style.display = "block";
+    tip.style.left = Math.min(ev.clientX + 14, innerWidth - tip.offsetWidth - 8) + "px";
+    tip.style.top = (ev.clientY + 14) + "px";
+  };
+  svg.onpointerleave = () => {
+    ch.style.display = "none";
+    dots.forEach(d => d.style.display = "none");
+    el("tip").style.display = "none";
+  };
+}
+
+const HS_WAN  = [{ label: "Download", key: "wan_rx", col: "--series-rx" },
+                 { label: "Upload",   key: "wan_tx", col: "--series-tx" }];
+const HS_LAN  = [{ label: "Received",    key: "lan_rx", col: "--series-rx" },
+                 { label: "Transmitted", key: "lan_tx", col: "--series-tx" }];
+// Firewall counters, split by protocol. They advance continuously, so unlike
+// transmission's every-few-minutes file they give a real line -- but the peer
+// port carries the DHT too, and UDP is mostly DHT whenever little is being
+// transferred. Splitting tcp from udp exposes that rather than burying it in one
+// aggregate that over-reads payload by 10x or more. Totals stay with transmission.
+const HS_BT   = [{ label: "Out TCP", key: "up_tcp", col: "--series-tx" },
+                 { label: "Out UDP", key: "up_udp", col: "--h4" },
+                 { label: "In TCP",  key: "dn_tcp", col: "--series-rx" },
+                 { label: "In UDP",  key: "dn_udp", col: "--h2" }];
+const HS_CPU  = [{ label: "Aggregate", key: "cpu",  col: "--h0" },
+                 { label: "Core 0",    key: "cpu0", col: "--h1" },
+                 { label: "Core 1",    key: "cpu1", col: "--h2" },
+                 { label: "Core 2",    key: "cpu2", col: "--h3" },
+                 { label: "Core 3",    key: "cpu3", col: "--h4" }];
+const HS_TEMP = [{ label: "Temperature",  key: "temp",     col: "--h1" }];
+const HS_MEM  = [{ label: "Memory used",  key: "mem_used", col: "--h2" }];
+const HS_CONN = [{ label: "Connections",  key: "conn",     col: "--h0" }];
+const HS_LSE  = [{ label: "DHCP leases",  key: "leases",   col: "--h2" }];
+const HS_NV   = [{ label: "NVRAM used",   key: "nvram",    col: "--h3" }];
+const HS_USB  = [{ label: "USB used",     key: "usb_used", col: "--h4" }];
+
+const fmtPct     = v => v.toFixed(0) + " %";
+const fmtAxisPct = v => v.toFixed(0);
+
+const fmtLoad    = v => v.toFixed(2);
+const fmtMs      = v => v < 10 ? v.toFixed(2) + " ms" : v.toFixed(1) + " ms";
+const fmtAxisMs  = v => v.toFixed(v < 10 ? 1 : 0);
+const fmtDbm     = v => Math.round(v) + " dBm";
+const fmtAxisDbm = v => Math.round(v);
+// DERIVE gives per-second rates; packet drops and login attempts are far more
+// legible per minute and per hour respectively than as fractions of a packet.
+const fmtPktMin  = v => (v * 60) < 1 && v > 0 ? (v * 60).toFixed(2) + " /min" : Math.round(v * 60) + " /min";
+const fmtPerHour = v => (v * 3600) < 1 && v > 0 ? (v * 3600).toFixed(2) + " /h" : Math.round(v * 3600) + " /h";
+// Liveness is stored as 0/1 and consolidated by averaging, so a value between
+// them is a partial window rather than a state -- reported as a percentage.
+const fmtUpDown  = v => v >= 0.999 ? "up" : v <= 0.001 ? "down" : (v * 100).toFixed(0) + "% up";
+
+// ---- Axis formatters that MATCH their value formatter's unit ----
+//
+// An axis formatter is not interchangeable with a value formatter: it has to
+// express the same quantity in the same unit, just more tersely. Four charts got
+// this wrong by falling back to fmtAxisCount, which prints the raw stored number:
+//
+//   wan_ip_age  stored in seconds  -> axis read "1,000,000" where the tooltip
+//                                     correctly said "11.6 days"
+//   drops/iferr DERIVE per second  -> axis in /s while the tooltip said /min
+//   ssh_scans   DERIVE per second  -> axis showed "0" for everything, because
+//                                     scan attempts per SECOND round to nothing
+//
+// Terser than their value counterparts on purpose: ticks are right-anchored
+// inside a 76px margin and anything wider is clipped off the viewBox.
+const fmtAxisAge = s => s < 90 ? Math.round(s) + "s"
+  : s < 5400 ? Math.round(s / 60) + "m"
+  : s < 172800 ? Math.round(s / 3600) + "h"
+  : s < 8640000 ? (s / 86400).toFixed(1) + "d"
+  : Math.round(s / 86400) + "d";
+const fmtAxisPerMin  = v => fmtAxisCount(v * 60);
+const fmtAxisPerHour = v => fmtAxisCount(v * 3600);
+
+const HS_LOAD  = [{ label: "1 min",  key: "load1",  col: "--h0" },
+                  { label: "5 min",  key: "load5",  col: "--h1" },
+                  { label: "15 min", key: "load15", col: "--h2" }];
+const HS_RTT   = [{ label: "Gateway", key: "gw_rtt", col: "--h0" },
+                  { label: "1.1.1.1", key: "c1_rtt", col: "--h1" },
+                  { label: "8.8.8.8", key: "g8_rtt", col: "--h2" }];
+const HS_LOSS  = [{ label: "Gateway", key: "gw_loss", col: "--h0" },
+                  { label: "1.1.1.1", key: "c1_loss", col: "--h1" },
+                  { label: "8.8.8.8", key: "g8_loss", col: "--h2" }];
+const HS_JIT   = [{ label: "Gateway", key: "gw_jit", col: "--h0" },
+                  { label: "1.1.1.1", key: "c1_jit", col: "--h1" },
+                  { label: "8.8.8.8", key: "g8_jit", col: "--h2" }];
+const HS_DROPS = [{ label: "Blocked inbound", key: "drops_in", col: "--series-rx" }];
+const HS_SSH   = [{ label: "Rejected logins", key: "ssh_scans", col: "--h1" }];
+const HS_EST   = [{ label: "IPv4", key: "est4", col: "--series-rx" },
+                  { label: "IPv6", key: "est6", col: "--h2" }];
+const HS_RULES = [{ label: "filter", key: "rules_f", col: "--h0" },
+                  { label: "nat",    key: "rules_n", col: "--h1" },
+                  { label: "mangle", key: "rules_m", col: "--h2" },
+                  { label: "raw",    key: "rules_r", col: "--h3" }];
+const HS_SVC   = [{ label: "Transmission", key: "svc_tm",   col: "--h0" },
+                  { label: "Web server",   key: "svc_web",  col: "--h1" },
+                  { label: "Collector",    key: "svc_coll", col: "--h2" }];
+const HS_WANIP = [{ label: "Since change", key: "wan_ip_age", col: "--h3" }];
+const HS_PEERS = [{ label: "Peers", key: "bt_peers", col: "--h0" }];
+const HS_IFERR = [{ label: "WAN drop", key: "e0_rxdrop", col: "--h0" },
+                  { label: "WAN err",  key: "e0_rxerr",  col: "--h1" },
+                  { label: "LAN drop", key: "br_rxdrop", col: "--h2" },
+                  { label: "LAN err",  key: "br_rxerr",  col: "--h3" }];
+const HS_NOISE = [{ label: "2.4 GHz", key: "r0_noise", col: "--h0" },
+                  { label: "5 GHz-1", key: "r1_noise", col: "--h1" },
+                  { label: "5 GHz-2", key: "r2_noise", col: "--h2" }];
+const HS_GLI   = [{ label: "2.4 GHz", key: "r0_glitch", col: "--h0" },
+                  { label: "5 GHz-1", key: "r1_glitch", col: "--h1" },
+                  { label: "5 GHz-2", key: "r2_glitch", col: "--h2" }];
+const HS_IDLE  = [{ label: "2.4 GHz", key: "r0_idle", col: "--h0" },
+                  { label: "5 GHz-1", key: "r1_idle", col: "--h1" },
+                  { label: "5 GHz-2", key: "r2_idle", col: "--h2" }];
+const HS_WCLI  = [{ label: "2.4 GHz", key: "r0_cli", col: "--h0" },
+                  { label: "5 GHz-1", key: "r1_cli", col: "--h1" },
+                  { label: "5 GHz-2", key: "r2_cli", col: "--h2" }];
+const HS_MEMD  = [{ label: "Cached", key: "mem_cached", col: "--h2" },
+                  { label: "Slab",   key: "mem_slab",   col: "--h3" }];
+const HS_KERN  = [{ label: "Context switches/s", key: "ctxt", col: "--h0" },
+                  { label: "Interrupts/s",       key: "intr", col: "--h1" }];
+const HS_PRUN  = [{ label: "Runnable", key: "prun", col: "--h0" }];
+const HS_JFFS  = [{ label: "/jffs used", key: "jffs_used", col: "--h4" }];
+const HS_ARP   = [{ label: "Known hosts", key: "arp", col: "--h0" }];
+
+// Mean of a series, ignoring gaps — used for the legend readouts, which state
+// the window average rather than a "current" value that history does not have.
+function avg(key) {
+  const a = (histData && histData.series && histData.series[key]) || [];
+  let s = 0, n = 0;
+  for (const v of a) if (v !== null && isFinite(v)) { s += v; n++; }
+  return n ? s / n : null;
+}
+const setAvg = (id, key, f) => {
+  const v = avg(key);
+  el(id).textContent = v === null ? "–" : f(v);
+};
+
+function drawHistCharts() {
+  drawH("hchart-wan",   HS_WAN,  fmtRate, fmtAxisRate);
+  drawH("hchart-bt",    HS_BT,   fmtRate, fmtAxisRate);
+  drawH("hchart-lan",   HS_LAN,  fmtRate, fmtAxisRate);
+  drawH("hchart-cpu",   HS_CPU,  fmtPct,  fmtAxisPct);
+  drawH("hchart-temp",  HS_TEMP, fmtTemp, fmtAxisT);
+  drawH("hchart-mem",   HS_MEM,  fmtKB,   fmtKB);
+  drawH("hchart-conn",  HS_CONN, fmtN,    fmtAxisCount);
+  drawH("hchart-lease", HS_LSE,  fmtN,    fmtAxisCount);
+  drawH("hchart-nv",    HS_NV,   fmtBytes, fmtBytes);
+  drawH("hchart-usb",   HS_USB,  fmtKB,   fmtKB);
+
+  drawH("hchart-load",  HS_LOAD,  fmtLoad,   fmtLoad);
+  drawH("hchart-rtt",   HS_RTT,   fmtMs,     fmtAxisMs);
+  drawH("hchart-loss",  HS_LOSS,  fmtPct,    fmtAxisPct);
+  drawH("hchart-jit",   HS_JIT,   fmtMs,     fmtAxisMs);
+
+  drawH("hchart-drops", HS_DROPS, fmtPktMin,  fmtAxisPerMin);
+  drawH("hchart-ssh",   HS_SSH,   fmtPerHour, fmtAxisPerHour);
+  drawH("hchart-est",   HS_EST,   fmtN,       fmtAxisCount);
+  drawH("hchart-rules", HS_RULES, fmtN,       fmtAxisCount);
+
+  drawH("hchart-svc",   HS_SVC,   fmtUpDown, fmtAxisPct);
+  drawH("hchart-wanip", HS_WANIP, fmtAge,      fmtAxisAge);
+  drawH("hchart-peers", HS_PEERS, fmtN,      fmtAxisCount);
+  drawH("hchart-iferr", HS_IFERR, fmtPktMin, fmtAxisPerMin);
+
+  drawH("hchart-noise",  HS_NOISE, fmtDbm, fmtAxisDbm);
+  drawH("hchart-glitch", HS_GLI,   fmtN,   fmtAxisCount);
+  drawH("hchart-idle",   HS_IDLE,  fmtPct, fmtAxisPct);
+  drawH("hchart-wcli",   HS_WCLI,  fmtN,   fmtAxisCount);
+
+  drawH("hchart-memd",  HS_MEMD, fmtKB,  fmtKB);
+  drawH("hchart-kern",  HS_KERN, fmtN,   fmtAxisCount);
+  drawH("hchart-prun",  HS_PRUN, fmtN,   fmtAxisCount);
+  drawH("hchart-jffs",  HS_JFFS, fmtKB,  fmtKB);
+  drawH("hchart-arp",   HS_ARP,  fmtN,   fmtAxisCount);
+}
+
+const TOTROWS = [
+  ["WAN download",         "wan_rx"],
+  ["WAN upload",           "wan_tx"],
+  ["BitTorrent upload",    "bt_up"],
+  ["BitTorrent download",  "bt_dn"],
+  ["LAN received",         "lan_rx"],
+  ["LAN transmitted",      "lan_tx"],
+];
+
+function paintHistory() {
+  if (!histData) return;
+
+  const ageS = Math.max(0, Date.now() / 1000 - histData.generated);
+  el("histsub").textContent =
+    `${WINLABEL[histWin]} · ${histData.step >= 3600 ? (histData.step / 3600) + "-hour" : (histData.step / 60) + "-minute"} resolution`;
+  el("histage").textContent = "exported " + fmtAge(ageS) + " ago";
+
+  // The exporter runs every 5 minutes; well past that means it stopped.
+  const st = el("histstale");
+  if (ageS > 900) {
+    st.classList.remove("hidden");
+    st.textContent = "These figures were exported " + fmtAge(ageS) +
+      " ago and are no longer being updated — the history feeder or the USB volume has stopped responding.";
+  } else {
+    st.classList.add("hidden");
+  }
+
+  setAvg("ht-wrx", "wan_rx", fmtRate);
+  setAvg("ht-wtx", "wan_tx", fmtRate);
+  setAvg("ht-lrx", "lan_rx", fmtRate);
+  setAvg("ht-ltx", "lan_tx", fmtRate);
+  setAvg("ht-but", "up_tcp", fmtRate);
+  setAvg("ht-buu", "up_udp", fmtRate);
+  setAvg("ht-bdt", "dn_tcp", fmtRate);
+  setAvg("ht-bdu", "dn_udp", fmtRate);
+  setAvg("ht-cpu", "cpu",    fmtPct);
+  setAvg("ht-l1",  "load1",  fmtLoad);
+  setAvg("ht-rtt-gw", "gw_rtt", fmtMs);
+  setAvg("ht-rtt-c1", "c1_rtt", fmtMs);
+  setAvg("ht-rtt-g8", "g8_rtt", fmtMs);
+  setAvg("ht-est4", "est4", fmtN);
+  setAvg("ht-est6", "est6", fmtN);
+
+  drawHistCharts();
+
+  const tb = el("httbody");
+  tb.innerHTML = "";
+  if (histTotals) {
+    for (const [label, key] of TOTROWS) {
+      const tr = document.createElement("tr");
+      const cells = ["day", "week", "month"].map(w => {
+        const v = histTotals[w] && histTotals[w][key];
+        return `<td>${v === undefined || v === null ? "–" : fmtBytes(v)}</td>`;
+      }).join("");
+      tr.innerHTML = `<td>${label}</td>` + cells;
+      tb.appendChild(tr);
+    }
+    const cov = ["day", "week", "month"].map(w =>
+      `${WINLABEL[w]}: ${histTotals[w] ? (histTotals[w].coverage * 100).toFixed(1) : "0"} %`).join(" · ");
+    el("histcov").textContent = "Coverage — share of each window that actually holds recorded data: " + cov;
+  }
+}
+
+async function loadHistory(w) {
+  try {
+    const r = await fetch(`/data/hist_${w}.json?_=` + Date.now(), { cache: "no-store" });
+    if (!r.ok) throw new Error("unavailable");
+    histData = await r.json();
+    try {
+      const tr = await fetch("/data/hist_totals.json?_=" + Date.now(), { cache: "no-store" });
+      histTotals = tr.ok ? await tr.json() : null;
+    } catch (e) { histTotals = null; }
+
+    el("histoff").classList.add("hidden");
+    el("histbody").classList.remove("hidden");
+    paintHistory();
+  } catch (e) {
+    // Absent rather than stale: the exporter deletes its output when the RRDs
+    // go away, so a failed fetch genuinely means "no history", not "not yet".
+    histData = null;
+    el("histbody").classList.add("hidden");
+    el("histsub").textContent = "unavailable";
+    el("histage").textContent = "";
+    const off = el("histoff");
+    off.classList.remove("hidden");
+    off.innerHTML = "<b>History is not available.</b><br>" +
+      "The round-robin databases live on the USB volume, so this section goes quiet whenever the stick is unmounted or Entware is unavailable. " +
+      "Everything above continues to work — the live dashboard reads only <code>status.json</code> from RAM and never depends on the stick.";
+  }
+}
+
+document.querySelectorAll(".hwin").forEach(b => {
+  b.onclick = () => {
+    histWin = b.dataset.w;
+    document.querySelectorAll(".hwin").forEach(o =>
+      o.setAttribute("aria-pressed", o === b ? "true" : "false"));
+    loadHistory(histWin);
+  };
+});
+
+loadHistory(histWin);
+setInterval(() => loadHistory(histWin), 300000);   // matches the exporter's cadence
+
+poll();
+setInterval(poll, 2000);
+</script>
+</body>
+</html>
