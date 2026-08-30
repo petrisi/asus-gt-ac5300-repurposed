@@ -12,6 +12,8 @@ Everything here was worked out on stock firmware. **No custom firmware, no
 bootloader unlock, no soldering, no opening the case.** Asuswrt-Merlin does not
 support this model, so all of this runs on what ASUS shipped.
 
+<img width="1085" height="1866" alt="image" src="https://github.com/user-attachments/assets/0853a9c7-aaf3-45b0-9699-7796d33ed7df" />
+
 ## What you get
 
 - A root shell that survives reboots
