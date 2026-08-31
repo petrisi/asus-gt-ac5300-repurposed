@@ -6,6 +6,10 @@ already powered on anyway.
 Distribute things you have the right to distribute. Linux images are the
 obvious case and the one this was built for.
 
+## Dashboard
+
+<img width="1042" height="280" alt="image" src="https://github.com/user-attachments/assets/7da6a9ab-7df7-4e68-9a1a-78db962c63cd" />
+
 ## Install
 
     unset LD_LIBRARY_PATH LD_PRELOAD
