@@ -96,6 +96,39 @@ proc_count() {   # $1 = file, $2 = header lines to skip. Echoes count; nothing o
     cat "$RUN/.pc" 2>/dev/null
 }
 
+# --- transmission RPC (optional; the dashboard never depends on it) --------
+# curl here is the FIRMWARE curl (/usr/sbin/curl), NOT Entware -- this file
+# must keep working with the USB stick pulled.
+#
+# Auth is disabled at the daemon (rpc-authentication-required=false) and the
+# RPC binds 127.0.0.1 with a 127.0.0.1 whitelist, so it is unreachable from
+# the network. The CSRF session-id handshake still applies: the first request
+# 409s and carries the id in a header.
+#
+# *** ANCHOR THE HEADER GREP. *** Transmission repeats the session id inside
+# the 409 HTML body as well, so an unanchored match returns BOTH copies
+# concatenated and every subsequent request 409s forever.
+TR_URL=http://127.0.0.1:9091/transmission/rpc
+tr_sid() {
+    curl -s -i --max-time 4 "$TR_URL" 2>/dev/null \
+      | grep -i '^X-Transmission-Session-Id:' | head -1 \
+      | sed 's/^[^:]*: *//' | tr -d '\r\n'
+}
+tr_rpc() {   # $1 = request body. Echoes the response, nothing on failure.
+    [ -s "$RUN/.tr_sid" ] || tr_sid > "$RUN/.tr_sid" 2>/dev/null
+    _s=$(cat "$RUN/.tr_sid" 2>/dev/null)
+    _r=$(curl -s --max-time 5 -H "X-Transmission-Session-Id: $_s" \
+              -d "$1" "$TR_URL" 2>/dev/null)
+    case "$_r" in *'"result":"success"'*) echo "$_r"; return 0 ;; esac
+    # Stale or absent id: re-handshake ONCE and retry. Deliberately not a loop
+    # -- a daemon that is down must cost one bounded attempt, not repeated ones.
+    tr_sid > "$RUN/.tr_sid" 2>/dev/null
+    _s=$(cat "$RUN/.tr_sid" 2>/dev/null)
+    [ -n "$_s" ] || return 1
+    curl -s --max-time 5 -H "X-Transmission-Session-Id: $_s" \
+         -d "$1" "$TR_URL" 2>/dev/null
+}
+
 P_CPU=$(snap_cpu); P_CORE=$(snap_core); P_NET=$(snap_net)
 P_SYS=$(snap_sys); P_FW=$(snap_fw); P_FW_SLOW="$P_FW"
 first=1; tick=0
@@ -103,6 +136,8 @@ rfi=0; rff=0
 s_nvu=0; s_nvf=0; s_arp=0; s_flow=0; s_ju=0; s_jt=0
 s_rf=0; s_rn=0; s_rm=0; s_rr=0
 s_up=0; s_ut=0; s_uu=0; s_ua=0     # USB absent until proven present
+s_bton=0; s_btdn=0; s_btup=0; s_btn=0; s_btact=0; s_btpau=0
+s_btcd=0; s_btcu=0; s_btcs=0; s_bttl=""   # transmission absent until proven present
 s_dhn=0; s_dhl=""; s_radios=""; s_sta=""
 
 while :; do
@@ -208,6 +243,49 @@ while :; do
             s_ut=${1:-0}; s_uu=${2:-0}; s_ua=${3:-0}
             [ "$s_ut" -gt 0 ] 2>/dev/null && s_up=1
         fi
+        # --- transmission (optional -- absence is a reported state) ---------
+        # Slow tick only: two HTTP round trips are far too expensive for the
+        # 2s loop. Every failure path leaves on=0, so a stopped daemon or a
+        # pulled stick degrades to "not running" and never stalls the collector.
+        s_bton=0; s_btdn=0; s_btup=0; s_btn=0; s_btact=0; s_btpau=0
+        s_btcd=0; s_btcu=0; s_btcs=0; s_bttl=""
+        if pidof transmission-daemon >/dev/null 2>&1; then
+            _ss=$(tr_rpc '{"method":"session-stats"}')
+            if [ -n "$_ss" ]; then
+                # cumulative-stats precedes current-stats in the response, so
+                # the FIRST occurrence of each byte counter is the lifetime one.
+                eval "$(echo "$_ss" | tr '{},' '\n\n\n' | awk -F: '
+                    /"downloadSpeed"/      {printf "s_btdn=%d\n", $2+0}
+                    /"uploadSpeed"/        {printf "s_btup=%d\n", $2+0}
+                    /"torrentCount"/       {printf "s_btn=%d\n", $2+0}
+                    /"activeTorrentCount"/ {printf "s_btact=%d\n", $2+0}
+                    /"pausedTorrentCount"/ {printf "s_btpau=%d\n", $2+0}
+                    /"downloadedBytes"/    {if(!d){printf "s_btcd=%.0f\n", $2+0; d=1}}
+                    /"uploadedBytes"/      {if(!u){printf "s_btcu=%.0f\n", $2+0; u=1}}
+                    /"secondsActive"/      {if(!v){printf "s_btcs=%.0f\n", $2+0; v=1}}')"
+                s_bton=1
+                _tg=$(tr_rpc '{"method":"torrent-get","arguments":{"fields":["name","status","percentDone","rateDownload","rateUpload","uploadRatio","peersConnected","eta"]}}')
+                if [ -n "$_tg" ]; then
+                    # busybox awk split() treats its separator as a REGEX, so
+                    # split(r,T,"},{") aborts with 'bad regex: Unmatched \{'.
+                    # Substitute a literal marker first -- same trick as
+                    # rrd_export.sh. Names are stripped of " and \ so a torrent
+                    # name can never break the emitted JSON.
+                    s_bttl=$(echo "$_tg" | awk '
+                        function fld(s,k,  v){ if(match(s,"\""k"\":[^,}]*")){ v=substr(s,RSTART,RLENGTH); sub("\""k"\":","",v); return v } return "" }
+                        { r=$0; gsub(/\},\{/,"@@",r); n=split(r,T,"@@")
+                          for(i=1;i<=n;i++){
+                            nm=fld(T[i],"name"); gsub(/^"|"$/,"",nm); gsub(/[\\"]/,"",nm)
+                            if(nm=="") continue
+                            printf "%s{\"n\":\"%s\",\"st\":%d,\"pct\":%.1f,\"dn\":%d,\"up\":%d,\"r\":%.2f,\"p\":%d,\"eta\":%d}",
+                              (c++?",":""), nm, fld(T[i],"status")+0,
+                              (fld(T[i],"percentDone")+0)*100,
+                              fld(T[i],"rateDownload")+0, fld(T[i],"rateUpload")+0,
+                              fld(T[i],"uploadRatio")+0, fld(T[i],"peersConnected")+0,
+                              fld(T[i],"eta")+0 } }')
+                fi
+            fi
+        fi
         s_rf=$(iptables -S 2>/dev/null | grep -c .)
         s_rn=$(iptables -t nat -S 2>/dev/null | grep -c .)
         s_rm=$(iptables -t mangle -S 2>/dev/null | grep -c .)
@@ -303,6 +381,8 @@ while :; do
 '"radios":[%s],"sta":[%s],'\
 '"slow":{"nvu":%s,"nvf":%s,"arp":%s,"flows":%s,"ju":%s,"jt":%s,'\
 '"rf":%s,"rn":%s,"rm":%s,"rr":%s},'\
+'"bt":{"on":%s,"dn":%s,"up":%s,"n":%s,"act":%s,"pau":%s,'\
+'"cd":%s,"cu":%s,"cs":%s,"t":[%s]},'\
 '"usb":{"on":%s,"t":%s,"u":%s,"a":%s}}\n' \
         "$now" "$clock" "$tzn" \
         "$h_model" "$h_name" "$h_lan" "$h_mask" "$h_fw" \
@@ -316,6 +396,8 @@ while :; do
         "$s_radios" "$s_sta" \
         "$s_nvu" "$s_nvf" "$s_arp" "$s_flow" "$s_ju" "$s_jt" \
         "$s_rf" "$s_rn" "$s_rm" "$s_rr" \
+        "$s_bton" "$s_btdn" "$s_btup" "$s_btn" "$s_btact" "$s_btpau" \
+        "$s_btcd" "$s_btcu" "$s_btcs" "$s_bttl" \
         "$s_up" "$s_ut" "$s_uu" "$s_ua" > "$TMP" 2>/dev/null
 
     mv "$TMP" "$JSON" 2>/dev/null

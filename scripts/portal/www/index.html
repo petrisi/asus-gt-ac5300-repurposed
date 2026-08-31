@@ -311,6 +311,35 @@
   </div>
 
   <div class="card">
+    <h2>BitTorrent</h2>
+    <div class="cardsub" id="btsub">–</div>
+    <table>
+      <thead><tr>
+        <th><span class="hint" title="Torrent name as reported by transmission.">Torrent</span></th>
+        <th><span class="hint" title="Transmission's own status: stopped, checking, queued, downloading or seeding.">State</span></th>
+        <th><span class="hint" title="Share of the torrent completed.">Done</span></th>
+        <th><span class="hint" title="Current download rate for this torrent.">Down</span></th>
+        <th><span class="hint" title="Current upload rate for this torrent.">Up</span></th>
+        <th><span class="hint" title="Uploaded divided by downloaded. Above 1.0 means this torrent has given back more than it took.">Ratio</span></th>
+        <th><span class="hint" title="Peers currently connected for this torrent.">Peers</span></th>
+        <th><span class="hint" title="Estimated time to completion. Not applicable while seeding.">ETA</span></th>
+      </tr></thead>
+      <tbody id="btbody"></tbody>
+    </table>
+    <div class="hnote" id="btnote"></div>
+
+    <div class="help">
+      Live figures from transmission's RPC on <code>127.0.0.1:9091</code>, polled on the collector's 30-second slow tick rather than the 2-second loop — two HTTP round trips are far too expensive to run every other second.
+      <b>This card is optional by design.</b> Transmission lives on the USB stick, so if the stick is pulled or the daemon is stopped the card reads "not running" and every other panel carries on unaffected — the same contract as the USB storage tile.
+      <div class="gloss">
+        <div><b>State</b><span>Transmission's numeric status, mapped to words. <em>Seeding</em> means the download is complete and the box is uploading to peers, which is this router's actual job.</span></div>
+        <div><b>Ratio</b><span>Uploaded divided by downloaded, per torrent. A well-seeded torrent climbs indefinitely; the figure only falls if you add new data.</span></div>
+        <div><b>Peers</b><span>Peers connected right now for this torrent. Zero on a seeding torrent usually means nobody is currently asking for it, not a fault.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
     <h2>DHCP server</h2>
     <div class="cardsub" id="dhcpsub">–</div>
     <table>
@@ -846,6 +875,47 @@ function renderTable() {
 // percentages are meaningful while the absolute rates are indicative only.
 const BAND_OF = { eth6: "2.4 GHz", eth7: "5 GHz-1", eth8: "5 GHz-2" };
 
+// Transmission, via its RPC. Optional by contract: bt.on === 0 covers both a
+// stopped daemon and a pulled USB stick, and must degrade to a note rather
+// than blanking the card or throwing.
+const BT_STATE = { 0: "stopped", 1: "check pending", 2: "checking",
+                   3: "queued", 4: "downloading", 5: "queued", 6: "seeding" };
+
+const fmtEta = s => {
+  if (s === null || s === undefined || s < 0) return "–";
+  const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60);
+  return d ? `${d}d ${h}h` : h ? `${h}h ${m}m` : `${m}m`;
+};
+
+function renderBT(bt) {
+  const sub = el("btsub"), body = el("btbody"), note = el("btnote");
+  if (!bt || !bt.on) {
+    sub.textContent = "not running";
+    body.innerHTML = '<tr><td colspan="8" style="color:var(--ink-muted)">transmission is not running — the USB stick may be absent</td></tr>';
+    note.textContent = "";
+    return;
+  }
+  sub.textContent = `${bt.n} torrent${bt.n === 1 ? "" : "s"} · ${bt.act} active · ` +
+                    `down ${fmtRate(bt.dn)} · up ${fmtRate(bt.up)}`;
+  // Heaviest uploader first: this box exists to seed, so that is the useful ordering.
+  const rows = (bt.t || []).slice().sort((a, b) => (b.up - a.up) || (b.r - a.r));
+  body.innerHTML = rows.length ? rows.map(t => {
+    const live = t.st === 4 || t.st === 6;
+    const name = t.n.length > 46 ? t.n.slice(0, 44) + "…" : t.n;
+    return `<tr><td title="${t.n}">${name}</td>` +
+      `<td style="color:${live ? "var(--good)" : "var(--ink-muted)"}">${BT_STATE[t.st] || "state " + t.st}</td>` +
+      `<td>${t.pct.toFixed(0)}%</td>` +
+      `<td>${t.dn ? fmtRate(t.dn) : "–"}</td>` +
+      `<td>${t.up ? fmtRate(t.up) : "–"}</td>` +
+      `<td>${t.r.toFixed(2)}</td>` +
+      `<td>${t.p}</td>` +
+      `<td>${fmtEta(t.eta)}</td></tr>`;
+  }).join("") : '<tr><td colspan="8" style="color:var(--ink-muted)">no torrents</td></tr>';
+  const ratio = bt.cd > 0 ? bt.cu / bt.cd : 0;
+  note.textContent = `Lifetime ${fmtBytes(bt.cu)} uploaded against ${fmtBytes(bt.cd)} downloaded` +
+                     ` — ratio ${ratio.toFixed(2)}, over ${fmtUp(bt.cs)} of daemon uptime.`;
+}
+
 function renderStations(sta) {
   const body = el("stabody"), note = el("stanote");
   if (!sta || !sta.length) {
@@ -927,6 +997,7 @@ function paint(d) {
   renderRadios(d.radios);
   renderStations(d.sta);
   renderLeases(d.dhcp);
+  renderBT(d.bt);
   el("cpu").textContent = d.cpu;
   el("load").textContent = "load " + d.load;
   el("temp").textContent = (d.temp_m / 1000).toFixed(1);

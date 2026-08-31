@@ -81,6 +81,18 @@ band-steering daemon reads the same ones — polling without it silently corrupt
 steering decisions, because the daemon then sees near-zero airtime for every
 station. The collector does this correctly; if you adapt it, keep the flag.
 
+
+## Torrent state
+
+If you run Transmission (`06-bittorrent.md`), the dashboard can carry a
+BitTorrent card — live rates, per-torrent state, ratio, peers, ETA — so the
+separate web UI is only needed for actually managing torrents.
+
+It polls the RPC over loopback on the **slow tick**, and treats absence as a
+reported state exactly like the USB tile: daemon stopped or stick pulled gives
+"not running", and nothing else on the page is affected. See
+`06-bittorrent.md` for the session-id handshake and the authentication
+trade-off, both of which have sharp edges.
 ## Three things learned the hard way
 
 **Judge liveness by data freshness, not process existence.** A hung collector

@@ -36,6 +36,64 @@ Do not open 9091 to the network. Tunnel it:
 Then browse to `http://127.0.0.1:9091/`. The RPC never leaves the box and
 access is gated by your SSH key.
 
+## Putting transmission on the dashboard
+
+The dashboard can show live torrent state — rates, per-torrent status, ratios,
+peers — instead of making you open the web UI separately. It reads the same RPC
+over loopback.
+
+**`curl` for this is the firmware's** (`/usr/sbin/curl`), not Entware, so the
+collector gains no dependency on the USB stick. If the stick is pulled or the
+daemon stops, `pidof transmission-daemon` fails, the section emits `on: 0`, and
+the card reads "not running" while every other panel carries on.
+
+It runs on the collector's **30-second slow tick**, not the 2-second loop — two
+HTTP round trips per sample would be absurd at 2 s.
+
+### The session-id handshake
+
+Transmission requires an `X-Transmission-Session-Id` header. The first request
+returns **409** carrying the id, which you then reuse.
+
+**Anchor the header match.** Transmission repeats the id *inside the 409 HTML
+body* as well as in the header:
+
+    grep -i 'X-Transmission-Session-Id'      # WRONG - matches both copies
+    grep -i '^X-Transmission-Session-Id:'    # right
+
+Without the anchor you concatenate both copies into a 132-character id, every
+request 409s, and the error looks like a server problem rather than a parsing
+one.
+
+### Authentication: a deliberate trade
+
+The lockdown above sets `rpc-authentication-required: true`, and the daemon
+rewrites the password as a **salted hash** on first run — so the stored value
+cannot be replayed for Basic auth. A collector therefore needs the plaintext
+from somewhere.
+
+Two honest options:
+
+**Keep auth on** and give the collector the password via a root-only file
+outside the document root (the same pattern as the lighttpd digest file). Costs
+one secret to manage.
+
+**Turn auth off** — `rpc-authentication-required: false`. Defensible *only*
+because the RPC is already bound to `127.0.0.1` and whitelisted to `127.0.0.1`,
+so it is unreachable from the network. What you give up is real: anyone who can
+get a shell on the box gets unauthenticated control of transmission, and the
+web UI stops prompting. On a box where shell access is already the highest
+privilege and is gated by an SSH key, that is a small marginal loss — but it is
+a loss, so decide it deliberately rather than by default.
+
+`transmission-daemon` reloads `settings.json` on **SIGHUP**, so this does not
+need a restart:
+
+    kill -HUP $(pidof transmission-daemon)
+
+Edit the file while it is *stopped* if you are not using SIGHUP — transmission
+rewrites `settings.json` on exit and will silently overwrite your change.
+
 ## Peer port
 
 The peer port does need to be reachable, on both address families if you run
